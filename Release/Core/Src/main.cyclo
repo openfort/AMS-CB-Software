@@ -1,0 +1,4 @@
+main.c:74:6:SerialMonitor	2
+main.c:156:6:SystemClock_Config	4
+main.c:93:5:main	8
+main.c:473:6:Error_Handler	1

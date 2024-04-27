@@ -1,0 +1,3 @@
+../Core/Src/CAN_Bus.c:10:10:CAN_convert	4	static
+../Core/Src/CAN_Bus.c:18:19:send_CAN	8	static
+../Core/Src/CAN_Bus.c:33:10:read_CAN	40	static
