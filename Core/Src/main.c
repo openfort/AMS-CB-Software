@@ -122,11 +122,11 @@ int main(void)
 
   // User Variables
   HAL_StatusTypeDef status;
-  Battery_StatusTypeDef batterie_status;
+  Battery_StatusTypeDef battery_status = BATTERY_ERROR;
   uint16_t GPIOA_Input = 0x0000;
   uint8_t volt_buffer[36*num_of_clients];
   uint8_t temp_buffer[20*num_of_clients];
-
+  uint8_t can_error_code = 0;
   /*
   while(GPIOA_Input & ((V_FB_AIR_negative_Pin | V_FB_AIR_positive_Pin)| V_FB_PC_Relay_Pin)){		// check Relay Feedback
 	  HAL_Delay(10);
@@ -148,9 +148,11 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	//>> Performance Monitor
+	//HAL_IWDG_Refresh(&hiwdg);
 
 	//>> GPIOs lesen
 	GPIOA_Input = GPIOA->IDR;
+	can_error_code = 0;
 
 	//>> check 10 Hz Flag, timer 6
     if ((TIM6->SR & TIM_SR_UIF) != 0) {
@@ -163,52 +165,79 @@ int main(void)
 
     	//>> Daten-Prüfen
     	if(status == HAL_OK){
-    		batterie_status = check_battery(volt_buffer, temp_buffer);
+    		battery_status = check_battery(volt_buffer, temp_buffer);
+    		if(battery_status){
+    			can_error_code |= Battery_error;
+    			if(battery_status & BATTERY_VOLT_ERROR){
+    				can_error_code |= Voltage_error;
+    			}
+    			if(battery_status & BATTERY_TEMP_ERROR){
+    				can_error_code |= Temperature_error;
+    			}
+    		}
+    	}else{
+    		can_error_code |= SPI_error;
+    	}
+    	//>> check can overflow
+    	if(FIFO_ovf()){
+    		can_error_code |= CAN_buffer_ovf;
+    	}
+
+    	//>> Balancing
+    	if(GPIOA_Input & Charger_Con_Pin){
+    		if(balancing()){
+    			Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin;	// high
+    		}else{
+    			Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
+    		}
+    	}else{
+    		Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
     	}
 
     	//>> Serial Monitor
+    	if(GPIOA_Input & SDC_Out_Pin){
+    		SerialMonitor(0xC1, (uint8_t *)NULL, 0);
+    	}else{
+    		SerialMonitor(0xC0, (uint8_t *)NULL, 0);
+    	}
+    	if(can_error_code&SPI_error){
+    		SerialMonitor(0xD0, (uint8_t *)NULL, 0);
+    	}
+    	if(can_error_code&Voltage_error){
+    		SerialMonitor(0xD1, (uint8_t *)NULL, 0);
+    	}
+    	if(can_error_code&Temperature_error){
+    		SerialMonitor(0xD2, (uint8_t *)NULL, 0);
+    	}
+    	if(can_error_code&Battery_error){
+			SerialMonitor(0xD3, (uint8_t *)NULL, 0);
+		}
+    	if(can_error_code&CAN_buffer_ovf){
+			SerialMonitor(0xD4, (uint8_t *)NULL, 0);
+		}
+
     	if(status == HAL_OK){
     		User_LED_GPIO_Port->ODR ^= User_LED_Pin; // Toggle user LED
     		SerialMonitor(volt, volt_buffer, sizeof(volt_buffer));
     		SerialMonitor(temp, temp_buffer, sizeof(temp_buffer));
     	}
 
-    	//>> Balancing
-    	if(GPIOA_Input & Charger_Con_Pin){
-    		Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin;	// high
-    		balancing();
-    	}else{
-    		Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
-    	}
+    	//>> send CAN information
+    	send_data2ECU(GPIOA_Input, can_error_code, volt_buffer, sizeof(volt_buffer), temp_buffer, sizeof(temp_buffer));
 
-    	static uint8_t can_data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};		// LSB first
-    	can_data[0] = 0;
-    	can_data[0] |= (GPIOA_Input&V_FB_AIR_positive_Pin) >> (3-0);
-    	can_data[0] |= (GPIOA_Input&V_FB_AIR_negative_Pin) >> (1-1);
-    	can_data[0] |= (GPIOA_Input&V_FB_PC_Relay_Pin)	   >> (4-2);
-    	uint16_t tot_volt = 0;
-    	for(uint8_t i=0; i<sizeof(volt_buffer); i++){
-    		tot_volt += volt_buffer[i];
-    	}
-    	can_data[2] = tot_volt&0xFF;
-    	can_data[3] = tot_volt>>8;
-    	uint16_t max_temp = 0;
-    	for(uint8_t i=0; i<sizeof(temp_buffer); i++){
-    		if(temp_buffer[i] > max_temp){
-    			max_temp = temp_buffer[i];
-    		}
-    	}
-    	can_data[4] = max_temp&0xFF;
-    	can_data[5] = max_temp>>8;
-    	send_CAN(can_data);
 
     }else{
+    	//>> receive one CAN command
     	uint8_t RxData[8];
     	static volatile uint32_t addres = 0;
     	addres = read_CAN(RxData);
-    	if(addres){
-    		//SerialMonitor(can, RxData, sizeof(RxData));   // testing und so
-    		set_relays(CAN_convert(RxData));
+    	if(addres == local_addr_ECU){
+    		set_relays(RxData[0]);
+    		if(RxData[0] & Battery_SW_reset){
+    			status = SDC_reset();
+    		}
+    	}else if(addres == local_addr_IVS){
+    		// do some current things
     	}
     }
   }
@@ -309,12 +338,12 @@ static void MX_CAN1_Init(void)
   /* USER CODE BEGIN CAN1_Init 2 */
 
   CAN_FilterTypeDef sFilterConfig;
-  // Configure Filter for ID 0x1234 on FIFO 0
+  // Configure Filter for ECU on FIFO 0
   sFilterConfig.FilterBank = 0; // Use first filter bank
   sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
   sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-  sFilterConfig.FilterIdHigh = ((addr1 >> 13)& 0xFFFF);
-  sFilterConfig.FilterIdLow =  ((addr1 << 3) & 0xFFF8);
+  sFilterConfig.FilterIdHigh = ((local_addr_ECU >> 13)& 0xFFFF);
+  sFilterConfig.FilterIdLow =  ((local_addr_ECU << 3) & 0xFFF8);
   sFilterConfig.FilterMaskIdHigh = 0xFFFF;
   sFilterConfig.FilterMaskIdLow = 0xFFF8;
   sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
@@ -322,11 +351,11 @@ static void MX_CAN1_Init(void)
   //sFilterConfig.SlaveStartFilterBank = 14; // Only necessary for dual CAN setups
 
   HAL_StatusTypeDef init_status = HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
-  // Configure Filter for ID 0x0011 on FIFO 1
+  // Configure Filter for IVS on FIFO 1
   sFilterConfig.FilterBank = 1; // Use second filter bank
   sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO1;
-  sFilterConfig.FilterIdHigh = ((addr2 >> 13)& 0xFFFF);
-  sFilterConfig.FilterIdLow =  ((addr2 << 3) & 0xFFF8);
+  sFilterConfig.FilterIdHigh = ((local_addr_IVS >> 13)& 0xFFFF);
+  sFilterConfig.FilterIdLow =  ((local_addr_IVS << 3) & 0xFFF8);
 
   init_status |= HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
   init_status |= HAL_CAN_Start(&hcan1); //start CAN
@@ -559,8 +588,10 @@ void Error_Handler(void)
   //__disable_irq();
   while (1)
   {
-	  SerialMonitor(error, 0x00000000, 0);
-	  HAL_Delay(5000);
+	  SerialMonitor(error, (uint8_t *)NULL, 0);
+	  send_data2ECU(0, 0xFF, (uint8_t *)NULL, 0, (uint8_t *)NULL, 0);
+	  // watchdog occurs after 100 ms
+	  HAL_Delay(1000);
   }
   /* USER CODE END Error_Handler_Debug */
 }

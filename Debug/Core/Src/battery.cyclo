@@ -2,4 +2,4 @@ battery.c:12:23:refresh_SDC	3
 battery.c:49:23:check_battery	4
 battery.c:29:23:SDC_reset	2
 battery.c:69:6:set_relays	5
-battery.c:91:6:balancing	1
+battery.c:91:9:balancing	1

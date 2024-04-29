@@ -10,6 +10,7 @@
 
 #include "main.h"
 #include "SPI_MB.h"
+#include "CAN_Bus.h"
 
 /**
   * @brief  Battery Status
@@ -23,11 +24,10 @@ typedef enum
   BATTERY_VT_ERROR    	= 0x07,
 } Battery_StatusTypeDef;
 
-//CAN Flags in 64 bit format
-#define AIR_positive 		(1<<0)
-#define AIR_negative 		(1<<1)
-#define Precharge_Relay 	(1<<2)
-#define Battery_SW_reset	(1<<3)
+#define MAX_VOLT 42000
+#define MIN_VOLT 30000
+#define MAX_TEMP 16725		// min temperature at 20°
+#define MIN_TEMP 6115		// max temperature at 60°
 
 // extern variables
 
@@ -35,6 +35,6 @@ typedef enum
 // Function prototypes
 Battery_StatusTypeDef SDC_reset();
 Battery_StatusTypeDef check_battery();
-void set_relays(uint64_t CAN_Data);
-void balancing(void);
+void set_relays(uint8_t CAN_Data);
+uint8_t balancing();
 #endif /* INC_BATTERY_H_ */

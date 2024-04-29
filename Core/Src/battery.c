@@ -54,19 +54,19 @@ Battery_StatusTypeDef check_battery(uint8_t *volt_buffer, uint8_t *temp_buffer){
 
 	for(uint16_t i = 0; i<(36*num_of_clients)>>1; i++){
 		// check over-, undervoltage
-		if(volt_data[i] < 30000 || volt_data[i] > 47000){
+		if(volt_data[i] < MIN_VOLT || volt_data[i] > MAX_VOLT){
 			status |= BATTERY_VOLT_ERROR;
 		}
 	}
 	for(uint16_t i = 0; i<(20*num_of_clients)>>1; i++){
-		if(temp_data[i] < 0){
-			status |= BATTERY_TEMP_ERROR;
+		if(temp_data[i] < MIN_TEMP || temp_data[i] > MAX_TEMP){
+			//status |= BATTERY_TEMP_ERROR;
 		}
 	}
 	return refresh_SDC(status);
 }
 
-void set_relays(uint64_t CAN_Data){
+void set_relays(uint8_t CAN_Data){
 	static uint64_t last_value = 0;
 	if(last_value != CAN_Data){
 		if(CAN_Data & AIR_positive){
@@ -88,7 +88,8 @@ void set_relays(uint64_t CAN_Data){
 	last_value = CAN_Data;
 }
 
-void balancing(void){
+uint8_t balancing(){
 	// do some balancing
+	return 1;
 
 }

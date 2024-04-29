@@ -15,18 +15,18 @@ uint64_t CAN_convert(uint8_t *data){
 	return data64;
 }
 
-HAL_StatusTypeDef send_CAN(uint8_t *TxData){		// 8*Bytes for TxData, LSB first
+HAL_StatusTypeDef send_CAN(uint32_t addres, uint8_t *TxBuffer){
 	static uint32_t TxMailbox[20];
 	static CAN_TxHeaderTypeDef TxHeader;
-	TxHeader.StdId = 0x123;   // Standard ID of the message
-	TxHeader.DLC = 8;         // Data Length Code (number of bytes in data field)
-	TxHeader.IDE = CAN_ID_STD; // Standard ID type
-	TxHeader.RTR = CAN_RTR_DATA; // Data frame, not remote frame
+	TxHeader.ExtId = addres;   			// ID of the message
+	TxHeader.DLC = 8;         			// Data Length Code (number of bytes in data field)
+	TxHeader.IDE = CAN_ID_EXT; 			// Extended ID type
+	TxHeader.RTR = CAN_RTR_DATA; 		// Data frame, not remote frame
 	TxHeader.TransmitGlobalTime = DISABLE; // Disable time stamp
     // Transmit CAN message
 	//HAL_CAN_WakeUp(&hcan1);
 	//HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, (uint32_t *)CAN_TX_MAILBOX0);
-	HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, TxMailbox);
+	HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxBuffer, TxMailbox);
     return status;
 }
 
@@ -48,3 +48,39 @@ uint16_t read_CAN(uint8_t *RxData){			// LSB first
 	}
 	return 0;
 }
+
+uint8_t FIFO_ovf(){
+	// check if FIFO is full
+	if ((HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) >= 3) || (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO1) >= 3)) {
+		return 1;
+	}else{
+		return 0;
+	}
+}
+
+HAL_StatusTypeDef send_data2ECU(uint32_t GPIO_Input, uint8_t error_codes, uint8_t *volt_buffer, uint16_t volt_buffer_size, uint8_t *temp_buffer, uint16_t temp_buffer_size){		// 8*Bytes for TxData, LSB first
+	uint8_t can_data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};		// LSB first
+	can_data[0] |= (GPIO_Input&V_FB_AIR_positive_Pin) >> (3-0);
+	can_data[0] |= (GPIO_Input&V_FB_AIR_negative_Pin) >> (1-1);
+	can_data[0] |= (GPIO_Input&V_FB_PC_Relay_Pin)	  >> (4-2);
+	can_data[0] |= (GPIO_Input&Charger_Con_Pin)       >> (10-4);
+	can_data[1] |= error_codes;
+	uint16_t total_volt = 0;
+	for(uint8_t i=0; i<volt_buffer_size; i++){
+		total_volt += volt_buffer[i];
+	}
+	can_data[2] = total_volt&0xFF;
+	can_data[3] = total_volt>>8;
+	uint16_t max_temp = 0;
+	for(uint8_t i=0; i<temp_buffer_size; i++){
+		if(temp_buffer[i] > max_temp){
+			max_temp = temp_buffer[i];
+		}
+	}
+	can_data[4] = max_temp&0xFF;
+	can_data[5] = max_temp>>8;
+
+	return send_CAN(0x123, can_data);
+}
+
+
