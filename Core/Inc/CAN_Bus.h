@@ -10,8 +10,9 @@
 
 #include "main.h"
 
-#define local_addr_ECU 0x234		// addres used from ECU TBD
-#define local_addr_IVS 0x12345		// addres used from Isabellenhütte IVS TBD
+#define local_addr_ECU 0x410		// addres used ECU => CB
+#define ext_addr_ECU   0x310		// addres used CB => ECU
+#define local_addr_IVS 0x12345		// addres used from ISA IVS-T TBD
 
 // CAN send/receive Flags in 8 bit format, can byte 0 LSB
 #define AIR_positive 		(1<<0)

@@ -10,6 +10,10 @@
 static uint8_t error_counter = 2;
 
 Battery_StatusTypeDef refresh_SDC(Battery_StatusTypeDef status){
+	if(SDC_IN_GPIO_Port->IDR & SDC_IN_Pin){
+		SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin<<16;	// SDC low
+		return BATTERY_ERROR;
+	}
 	if (status == BATTERY_OK){
 		// SDC OK
 		// reset tim7 timeout counter
@@ -27,6 +31,10 @@ Battery_StatusTypeDef refresh_SDC(Battery_StatusTypeDef status){
 }
 
 Battery_StatusTypeDef SDC_reset(){
+	if(SDC_IN_GPIO_Port->IDR & SDC_IN_Pin){
+		SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin<<16;	// SDC low
+		return BATTERY_ERROR;
+	}
 	error_counter = 2;
 	uint8_t volt_buffer[36*num_of_clients];
 	uint8_t temp_buffer[20*num_of_clients];
@@ -60,7 +68,9 @@ Battery_StatusTypeDef check_battery(uint8_t *volt_buffer, uint8_t *temp_buffer){
 	}
 	for(uint16_t i = 0; i<(20*num_of_clients)>>1; i++){
 		if(temp_data[i] < MIN_TEMP || temp_data[i] > MAX_TEMP){
-			//status |= BATTERY_TEMP_ERROR;
+			if(i!=5 && i!=15){
+				status |= BATTERY_TEMP_ERROR;
+			}
 		}
 	}
 	return refresh_SDC(status);

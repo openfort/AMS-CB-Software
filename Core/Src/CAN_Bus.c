@@ -80,7 +80,7 @@ HAL_StatusTypeDef send_data2ECU(uint32_t GPIO_Input, uint8_t error_codes, uint8_
 	can_data[4] = max_temp&0xFF;
 	can_data[5] = max_temp>>8;
 
-	return send_CAN(0x123, can_data);
+	return send_CAN(ext_addr_ECU, can_data);
 }
 
 
