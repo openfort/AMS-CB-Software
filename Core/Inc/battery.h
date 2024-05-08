@@ -15,6 +15,12 @@
 /**
   * @brief  Battery Status
   */
+
+#define MAX_VOLT 42000
+#define MIN_VOLT 30000
+#define MAX_TEMP 16725		// min temperature at 20°
+#define MIN_TEMP 6115		// max temperature at 60°
+
 typedef enum
 {
   BATTERY_OK       		= 0x00,
@@ -24,13 +30,23 @@ typedef enum
   BATTERY_VT_ERROR    	= 0x07,
 } Battery_StatusTypeDef;
 
-#define MAX_VOLT 42000
-#define MIN_VOLT 30000
-#define MAX_TEMP 16725		// min temperature at 20°
-#define MIN_TEMP 6115		// max temperature at 60°
+// struct for the battery
+typedef struct {
+    uint16_t totalVoltage;          // Total voltage of the accumulator system
+    uint16_t highestCellVoltage;    // Highest voltage among individual cells
+    uint16_t lowestCellVoltage;     // Lowest voltage among individual cells
+    uint16_t meanCellVoltage;       // Mean voltage of all cells
+
+    uint16_t highestCellTemp;
+    uint16_t lowestCellTemp;
+    uint16_t meanCellTemp;
+
+    uint16_t actualCurrent;
+    Battery_StatusTypeDef status;     // Current status of the accumulator
+} BatterySystemTypeDef;
 
 // extern variables
-
+extern BatterySystemTypeDef battery_values;
 
 // Function prototypes
 Battery_StatusTypeDef SDC_reset();

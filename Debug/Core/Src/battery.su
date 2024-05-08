@@ -1,5 +1,7 @@
-../Core/Src/battery.c:12:23:refresh_SDC	0	static
-../Core/Src/battery.c:57:23:check_battery	8	static
-../Core/Src/battery.c:33:23:SDC_reset	64	static
-../Core/Src/battery.c:79:6:set_relays	0	static
-../Core/Src/battery.c:101:9:balancing	0	static
+../Core/Src/battery.c:13:6:init_Battery_values	0	static
+../Core/Src/battery.c:27:23:calc_Battery_values	8	static
+../Core/Src/battery.c:67:23:refresh_SDC	0	static
+../Core/Src/battery.c:112:23:check_battery	8	static
+../Core/Src/battery.c:88:23:SDC_reset	288	static
+../Core/Src/battery.c:126:6:set_relays	0	static
+../Core/Src/battery.c:148:9:balancing	0	static

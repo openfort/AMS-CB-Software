@@ -168,10 +168,10 @@ int main(void)
     		battery_status = check_battery(volt_buffer, temp_buffer);
     		if(battery_status){
     			can_error_code |= Battery_error;
-    			if(battery_status & BATTERY_VOLT_ERROR){
+    			if((battery_status & BATTERY_VOLT_ERROR)==BATTERY_VOLT_ERROR){
     				can_error_code |= Voltage_error;
     			}
-    			if(battery_status & BATTERY_TEMP_ERROR){
+    			if((battery_status & BATTERY_TEMP_ERROR)==BATTERY_TEMP_ERROR){
     				can_error_code |= Temperature_error;
     			}
     		}
@@ -219,17 +219,17 @@ int main(void)
     	if(status == HAL_OK){
     		User_LED_GPIO_Port->ODR ^= User_LED_Pin; // Toggle user LED
     		SerialMonitor(volt, volt_buffer, sizeof(volt_buffer));
-    		SerialMonitor(temp, temp_buffer, sizeof(temp_buffer));
+    		SerialMonitor(temp, temp_buffer, 16*num_of_clients);
     	}
 
     	//>> send CAN information
-    	send_data2ECU(GPIOA_Input, can_error_code, volt_buffer, sizeof(volt_buffer), temp_buffer, sizeof(temp_buffer));
+    	send_data2ECU(GPIOA_Input, can_error_code);
 
 
-    }else{
+    }else{		// outside 10Hz timer 6
     	//>> receive one CAN command
     	uint8_t RxData[8];
-    	static volatile uint32_t addres = 0;
+    	uint32_t addres = 0;
     	addres = read_CAN(RxData);
     	if(addres == local_addr_ECU){
     		set_relays(RxData[0]);
@@ -589,7 +589,7 @@ void Error_Handler(void)
   while (1)
   {
 	  SerialMonitor(error, (uint8_t *)NULL, 0);
-	  send_data2ECU(0, 0xFF, (uint8_t *)NULL, 0, (uint8_t *)NULL, 0);
+	  send_data2ECU(0, 0xFF);
 	  // watchdog occurs after 100 ms
 	  HAL_Delay(1000);
   }

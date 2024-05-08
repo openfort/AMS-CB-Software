@@ -8,6 +8,61 @@
 #include "battery.h"
 
 static uint8_t error_counter = 2;
+BatterySystemTypeDef battery_values;
+
+void init_Battery_values(){
+	battery_values.totalVoltage = 0;
+	battery_values.highestCellVoltage = 0;
+	battery_values.lowestCellVoltage = 0;
+	battery_values.meanCellVoltage = 0;
+
+	battery_values.highestCellTemp = 0;
+	battery_values.lowestCellTemp = 0;
+	battery_values.meanCellTemp = 0;
+
+	battery_values.actualCurrent = 0;
+	battery_values.status = BATTERY_ERROR;
+}
+
+BatterySystemTypeDef* calc_Battery_values(uint8_t *volt_buffer, uint8_t *temp_buffer){
+	uint16_t *volt_data = (uint16_t*)(volt_buffer);
+	uint16_t *temp_data = (uint16_t*)(temp_buffer);
+
+	// get total, mean, min, max
+	uint32_t total = 0;
+	uint16_t min = 50000;
+	uint16_t max = 0;
+	for(uint16_t i = 0; i<(18*num_of_clients); i++){
+		total += volt_data[i];
+		if(volt_data[i] < min){
+			min = volt_data[i];
+		}
+		if(volt_data[i] > max){
+			max = volt_data[i];
+		}
+	}
+	battery_values.meanCellVoltage = (uint16_t)(total / (18*num_of_clients));
+	battery_values.totalVoltage = (uint16_t)(total /= 1000); 		// total voltage in 0.1V/bit
+	battery_values.lowestCellVoltage = min;
+	battery_values.highestCellVoltage = max;
+
+	total = 0;
+	min = 50000;
+	max = 0;
+	for(uint16_t i = 0; i<(8*num_of_clients); i++){
+		total += temp_data[i];
+		if(temp_data[i] < min){
+			min = temp_data[i];
+		}
+		if(temp_data[i] > max){
+			max = temp_data[i];
+		}
+	}
+	battery_values.meanCellTemp = (uint16_t)(total / (8*num_of_clients));
+	battery_values.lowestCellTemp = min;
+	battery_values.highestCellTemp = max;
+	return &battery_values;
+}
 
 Battery_StatusTypeDef refresh_SDC(Battery_StatusTypeDef status){
 	if(SDC_IN_GPIO_Port->IDR & SDC_IN_Pin){
@@ -24,7 +79,7 @@ Battery_StatusTypeDef refresh_SDC(Battery_StatusTypeDef status){
 		error_counter++;
 		if(error_counter >= 3){
 			SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin<<16;	// SDC low
-			return BATTERY_ERROR;
+			return status;
 		}
 	}
 	return BATTERY_OK;
@@ -55,25 +110,17 @@ Battery_StatusTypeDef SDC_reset(){
 }
 
 Battery_StatusTypeDef check_battery(uint8_t *volt_buffer, uint8_t *temp_buffer){
+	calc_Battery_values(volt_buffer, temp_buffer);
 	// check limits
-	uint16_t *volt_data = (uint16_t*)(volt_buffer);
-	uint16_t *temp_data = (uint16_t*)(temp_buffer);
 	Battery_StatusTypeDef status = BATTERY_OK;
-
-	for(uint16_t i = 0; i<(36*num_of_clients)>>1; i++){
-		// check over-, undervoltage
-		if(volt_data[i] < MIN_VOLT || volt_data[i] > MAX_VOLT){
-			status |= BATTERY_VOLT_ERROR;
-		}
+	if((battery_values.highestCellVoltage > MAX_VOLT) || (battery_values.lowestCellVoltage < MIN_VOLT)){
+		status |= BATTERY_VOLT_ERROR;
 	}
-	for(uint16_t i = 0; i<(20*num_of_clients)>>1; i++){
-		if(temp_data[i] < MIN_TEMP || temp_data[i] > MAX_TEMP){
-			if(i!=5 && i!=15){
-				status |= BATTERY_TEMP_ERROR;
-			}
-		}
+	if((battery_values.highestCellTemp > MAX_TEMP) || (battery_values.lowestCellTemp < MIN_TEMP)){
+		status |= BATTERY_TEMP_ERROR;
 	}
-	return refresh_SDC(status);
+	battery_values.status = refresh_SDC(status);
+	return battery_values.status;
 }
 
 void set_relays(uint8_t CAN_Data){

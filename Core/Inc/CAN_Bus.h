@@ -9,6 +9,7 @@
 #define INC_CAN_BUS_H_
 
 #include "main.h"
+#include "battery.h"
 
 #define local_addr_ECU 0x410		// addres used ECU => CB
 #define ext_addr_ECU   0x310		// addres used CB => ECU
@@ -29,15 +30,13 @@
 #define CAN_buffer_ovf		(1<<4)
 
 // 16 bit voltage in can byte 2/3
-
 // 16 bit temperature in can byte 4/5
-
 // 16 bit reserve in can byte 6/7 MSB
 
 extern CAN_HandleTypeDef hcan1;
 
 uint64_t CAN_convert(uint8_t *data);
-HAL_StatusTypeDef send_data2ECU(uint32_t GPIO_Input, uint8_t error_codes, uint8_t *volt_buffer, uint16_t volt_buffer_size, uint8_t *temp_buffer, uint16_t temp_buffer_size);
+HAL_StatusTypeDef send_data2ECU(uint32_t GPIO_Input, uint8_t error_codes);
 uint16_t read_CAN(uint8_t *RxData);
 uint8_t FIFO_ovf();
 

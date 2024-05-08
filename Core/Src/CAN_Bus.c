@@ -58,29 +58,19 @@ uint8_t FIFO_ovf(){
 	}
 }
 
-HAL_StatusTypeDef send_data2ECU(uint32_t GPIO_Input, uint8_t error_codes, uint8_t *volt_buffer, uint16_t volt_buffer_size, uint8_t *temp_buffer, uint16_t temp_buffer_size){		// 8*Bytes for TxData, LSB first
+HAL_StatusTypeDef send_data2ECU(uint32_t GPIO_Input, uint8_t error_codes){		// 8*Bytes for TxData, LSB first
 	uint8_t can_data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};		// LSB first
 	can_data[0] |= (GPIO_Input&V_FB_AIR_positive_Pin) >> (3-0);
 	can_data[0] |= (GPIO_Input&V_FB_AIR_negative_Pin) >> (1-1);
 	can_data[0] |= (GPIO_Input&V_FB_PC_Relay_Pin)	  >> (4-2);
 	can_data[0] |= (GPIO_Input&Charger_Con_Pin)       >> (10-4);
 	can_data[1] |= error_codes;
-	uint16_t total_volt = 0;
-	for(uint8_t i=0; i<volt_buffer_size; i++){
-		total_volt += volt_buffer[i];
-	}
+	uint16_t total_volt = battery_values.totalVoltage;
 	can_data[2] = total_volt&0xFF;
 	can_data[3] = total_volt>>8;
-	uint16_t max_temp = 0;
-	for(uint8_t i=0; i<temp_buffer_size; i++){
-		if(temp_buffer[i] > max_temp){
-			max_temp = temp_buffer[i];
-		}
-	}
+	uint16_t max_temp = battery_values.highestCellTemp;
 	can_data[4] = max_temp&0xFF;
 	can_data[5] = max_temp>>8;
 
 	return send_CAN(ext_addr_ECU, can_data);
 }
-
-
