@@ -30,7 +30,8 @@ Core/Src/battery.o: ../Core/Src/battery.c ../Core/Inc/battery.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h \
- ../Core/Inc/SPI_MB.h ../Core/Inc/CAN_Bus.h ../Core/Inc/battery.h
+ ../Core/Inc/SPI_MB.h ../Core/Inc/CAN_Bus.h ../Core/Inc/battery.h \
+ ../Core/Inc/CB_status_error_flags.h
 ../Core/Inc/battery.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
@@ -67,3 +68,4 @@ Core/Src/battery.o: ../Core/Src/battery.c ../Core/Inc/battery.h \
 ../Core/Inc/SPI_MB.h:
 ../Core/Inc/CAN_Bus.h:
 ../Core/Inc/battery.h:
+../Core/Inc/CB_status_error_flags.h:

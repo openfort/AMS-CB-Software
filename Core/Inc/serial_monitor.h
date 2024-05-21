@@ -16,8 +16,7 @@ typedef enum
   volt		= 0xA0,
   temp		= 0xA1,
   can		= 0xA2,
-  status	= 0xC0,
-  error		= 0XD0,
+  all_values= 0xA3,
 } Serial_Commmand_type;
 
 // HAL Handle

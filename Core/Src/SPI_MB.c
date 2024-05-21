@@ -8,21 +8,23 @@
 #include "SPI_MB.h"
 
 // Default Configuration Register
-static const uint8_t CFGAR[] = {0xF9, 0x00, 0xF0, 0xFF, 0x00, 0x00}; // data for CRFA, ADCOPT = 1, REFON = 1, GPIOx = 1
-static const uint8_t CFGBR[] = {0x0F, 0x00, 0x00, 0x00, 0x00, 0x00}; // data for CRFB
+static const uint8_t CFGAR[] = {0xF9, 0x00, 0xF0, 0xFF, 0x00, 0x00};		// data for CRFA, ADCOPT = 1, REFON = 1, GPIOx = 1
+static const uint8_t CFGBR[] = {0x0F, 0x80, 0x00, 0x00, 0x00, 0x00};		// data for CRFB, MUTE = 1, GPIOx = 1
 static const uint8_t RDCV[] = {RDCVA, RDCVB, RDCVC, RDCVD, RDCVE, RDCVF};	// Read Voltages Register
-static const uint8_t RDAUX[] = {RDAUXA, RDAUXB, RDAUXC, RDAUXD};
+static const uint8_t RDAUX[] = {RDAUXA, RDAUXB, RDAUXC, RDAUXD};			// Read Temp Register
 
 void delay_1us(){	// delay 960ns + pin delay 45ns = 1050ns
 	for(volatile uint32_t i=0; i<5; i++);	// 100ns per cycle
 }
 
 void wake_up(){
-	for(uint8_t i=0; i<num_of_clients+2; i++){
+	for(uint8_t i=0; i<NUM_OF_CLIENTS+2; i++){
 		GPIOB->BSRR = ISO_SPI_CS1_Pin<<16;	// CS low
 		delay_1us();
 		GPIOB->BSRR = ISO_SPI_CS1_Pin;	// CS high
-		delay_1us();
+		for(uint16_t i=0; i<400;i++){
+			delay_1us();
+		}
 	}
 	for(volatile uint32_t i=0; i<100; i++);	// 100ns per cycle, 10us, communication ready time
 }
@@ -84,8 +86,8 @@ HAL_StatusTypeDef Command(uint16_t command){	// checked
 	return SPI_Transceive(tx_data, rx_data, 4);
 }
 
-HAL_StatusTypeDef Write_Registergroup(uint16_t command, uint8_t *data){		// write data to every single client, data length: 6*num_of_clients
-	uint8_t tx_data[4+num_of_clients*8];
+HAL_StatusTypeDef Write_Registergroup(uint16_t command, uint8_t *data){		// write data to every single client, data length: 6*NUM_OF_CLIENTS
+	uint8_t tx_data[4+NUM_OF_CLIENTS*8];
 	uint8_t crc_data[2];
 	crc_data[0] = command>>8;
 	crc_data[1] = command&0xFF;
@@ -94,7 +96,7 @@ HAL_StatusTypeDef Write_Registergroup(uint16_t command, uint8_t *data){		// writ
 	tx_data[1] = command&0xFF;
 	tx_data[2] = crc>>8;
 	tx_data[3] = crc&0xFF;
-	for(uint16_t i=0; i<num_of_clients; i++){
+	for(uint16_t i=0; i<NUM_OF_CLIENTS; i++){
 		for(uint16_t j=0; j<6; j++){
 			tx_data[4+i*8+j] = data[i*6+j];
 		}
@@ -106,10 +108,10 @@ HAL_StatusTypeDef Write_Registergroup(uint16_t command, uint8_t *data){		// writ
 	return SPI_Transceive(tx_data, rx_data, sizeof(tx_data));
 }
 
-HAL_StatusTypeDef Read_Registergroup(uint16_t command, uint8_t *buffer){		// checked, read data for every single client, data length: 6*num_of_clients
-	uint8_t tx_data[4+num_of_clients*8];
+HAL_StatusTypeDef Read_Registergroup(uint16_t command, uint8_t *buffer){		// checked, read data for every single client, data length: 6*NUM_OF_CLIENTS
+	uint8_t tx_data[4+NUM_OF_CLIENTS*8];
 	for(uint16_t i=0; i<sizeof(tx_data)-4; i++){
-		tx_data[i+4] = dummy;
+		tx_data[i+4] = DUMMY;
 	}
 	uint8_t crc_data[2];
 	crc_data[0] = command>>8;
@@ -122,7 +124,7 @@ HAL_StatusTypeDef Read_Registergroup(uint16_t command, uint8_t *buffer){		// che
 	uint8_t rx_data[sizeof(tx_data)];
 	HAL_StatusTypeDef status = SPI_Transceive(tx_data, rx_data, sizeof(tx_data));		// read data
 	uint16_t not_valid;
-	for(uint16_t i=0; i<num_of_clients; i++){
+	for(uint16_t i=0; i<NUM_OF_CLIENTS; i++){
 		crc = generatePEC(&rx_data[4+i*8], 6);
 		not_valid = (rx_data[10+i*8]<<8 | rx_data[11+i*8])-crc;		// check crc
 		for(uint16_t j=0; j<6; j++){			// write to buffer
@@ -135,9 +137,9 @@ HAL_StatusTypeDef Read_Registergroup(uint16_t command, uint8_t *buffer){		// che
 	return status;
 }
 
-HAL_StatusTypeDef Read_Voltages(uint8_t *buffer){		// checked, num_of_clients * 36
-	HAL_StatusTypeDef status;
-	uint8_t sbuffer[num_of_clients*6];		// short buffer for a single transmission
+HAL_StatusTypeDef Read_Voltages(uint8_t *buffer){		// checked, NUM_OF_CLIENTS * 36
+	HAL_StatusTypeDef status = HAL_TIMEOUT;
+	uint8_t sbuffer[NUM_OF_CLIENTS*6];		// short buffer for a single transmission
 	wake_up();
 	Command(ADCV);
 	HAL_Delay(3);
@@ -145,13 +147,13 @@ HAL_StatusTypeDef Read_Voltages(uint8_t *buffer){		// checked, num_of_clients * 
 		//wake_up();		// used for debug
 		status = Read_Registergroup(RDCV[i], sbuffer);
 		if(status==HAL_OK){
-			for(uint16_t j=0; j<num_of_clients; j++){
+			for(uint16_t j=0; j<NUM_OF_CLIENTS; j++){
 				for(uint16_t k=0;k<6; k++){
 					buffer[j*36+i*6+k] = sbuffer[j*6+k];
 				}
 			}
 		}else{
-			for(uint16_t j=0; j<(num_of_clients*36); j++){
+			for(uint16_t j=0; j<(NUM_OF_CLIENTS*36); j++){
 				buffer[j] = 0;
 			}
 			return status;
@@ -160,9 +162,9 @@ HAL_StatusTypeDef Read_Voltages(uint8_t *buffer){		// checked, num_of_clients * 
 	return status;
 }
 
-HAL_StatusTypeDef Read_Temp(uint8_t *buffer){		// buffer num_of_clients * 20
+HAL_StatusTypeDef Read_Temp(uint8_t *buffer){		// buffer NUM_OF_CLIENTS * 20
 	HAL_StatusTypeDef status;
-	uint8_t sbuffer[num_of_clients*6];		// short buffer for a single transmission
+	uint8_t sbuffer[NUM_OF_CLIENTS*6];		// short buffer for a single transmission
 	wake_up();
 	Command(ADAX);
 	HAL_Delay(3);
@@ -171,20 +173,20 @@ HAL_StatusTypeDef Read_Temp(uint8_t *buffer){		// buffer num_of_clients * 20
 		status = Read_Registergroup(RDAUX[i], sbuffer);
 		if(status==HAL_OK){
 			if(i<3){		// Register AUXA - AUXC
-				for(uint16_t j=0; j<num_of_clients; j++){		// read 6 Bytes
+				for(uint16_t j=0; j<NUM_OF_CLIENTS; j++){		// read 6 Bytes
 					for(uint16_t k=0;k<6; k++){
 						buffer[j*20+i*6+k] = sbuffer[j*6+k];
 					}
 				}
 			}else{			// Register AUXD
-				for(uint16_t j=0; j<num_of_clients; j++){		// read 2 Bytes
+				for(uint16_t j=0; j<NUM_OF_CLIENTS; j++){		// read 2 Bytes
 					for(uint16_t k=0;k<2; k++){
 						buffer[j*20+i*6+k] = sbuffer[j*6+k];
 					}
 				}
 			}
 		}else{
-			for(uint16_t j=0; j<(num_of_clients*20); j++){
+			for(uint16_t j=0; j<(NUM_OF_CLIENTS*20); j++){
 				buffer[j] = 0;
 			}
 			return status;
@@ -192,7 +194,7 @@ HAL_StatusTypeDef Read_Temp(uint8_t *buffer){		// buffer num_of_clients * 20
 	}
 	// delete reference voltage and gpio9 => values 5 and 9
 	uint16_t j=12;
-	for(uint16_t i=10; i<16*num_of_clients; i++){
+	for(uint16_t i=10; i<16*NUM_OF_CLIENTS; i++){
 		buffer[i] = buffer[j];
 		if((j%20==9) || (j%20==17)){
 			j+=3;
@@ -203,10 +205,78 @@ HAL_StatusTypeDef Read_Temp(uint8_t *buffer){		// buffer num_of_clients * 20
 	return status;
 }
 
+HAL_StatusTypeDef write_balancing_PWM(uint8_t enable_discharge, uint8_t *discharge_values){
+	static uint8_t enable = 0;
+	HAL_StatusTypeDef status = HAL_OK;
+
+	if(enable_discharge){
+		// write discharge_values to ADBMS cients
+
+		uint8_t sbuffer[NUM_OF_CLIENTS*12];		// short buffer for single client
+		sbuffer[9] = 0;
+		sbuffer[10]= 0;
+		sbuffer[11]= 0;
+		wake_up();
+		for(uint8_t i=0; i<NUM_OF_CLIENTS; i++){
+			for(uint8_t j=0; j<9; j++){
+				sbuffer[j] = (discharge_values[i*18 + j*2 +1]<<4) | discharge_values[i*18 + j*2];
+			}
+			status |= Write_Registergroup(WRPWM, sbuffer);
+			status |= Write_Registergroup(WRPSB, sbuffer+6);
+		}
+	}
+
+	if(enable_discharge != enable){
+		enable = enable_discharge;
+		wake_up();
+		if(enable_discharge){
+			status|= Command(UNMUTE);
+		}else{
+			status |= Command(MUTE);
+		}
+	}
+	return status;
+}
+
+HAL_StatusTypeDef set_DCCx(uint32_t* cells_to_balance){
+	HAL_StatusTypeDef status = HAL_OK;
+	uint8_t enable_discharge = 0;
+
+	// read all temps to enable discharge
+
+	wake_up();
+	// set dccx per client
+	uint8_t sbuffer[6];
+	for(uint8_t i=0; i<NUM_OF_CLIENTS; i++){
+		if(cells_to_balance[i]){
+			enable_discharge = 1;
+		}
+		for(uint8_t j=0; j<6; j++){
+			sbuffer[j] = CFGAR[j];
+		}
+		sbuffer[4] |= cells_to_balance[i] & 0xFF;
+		sbuffer[5] |= (cells_to_balance[i]>>8) & 0x0F;
+		status |= Write_Registergroup(WRCFGA, sbuffer);
+		for(uint8_t j=0; j<6; j++){
+			sbuffer[j] = CFGBR[j];
+		}
+		sbuffer[0] |= (cells_to_balance[i]>>8) & 0xF0;
+		sbuffer[1] |= (cells_to_balance[i]>>16) & 0x03;
+		status |= Write_Registergroup(WRCFGB, sbuffer);
+	}
+
+	if(enable_discharge){
+		status|= Command(UNMUTE);
+	}else{
+		status|= Command(MUTE);
+	}
+	return status;
+}
+
 HAL_StatusTypeDef ADBMS_HW_Init(){
-	uint8_t config_data_A[num_of_clients*6];
-	uint8_t config_data_B[num_of_clients*6];
-	for(uint16_t i=0; i<num_of_clients; i++){
+	uint8_t config_data_A[NUM_OF_CLIENTS*6];
+	uint8_t config_data_B[NUM_OF_CLIENTS*6];
+	for(uint16_t i=0; i<NUM_OF_CLIENTS; i++){
 		for(uint16_t j=0; j<6; j++){
 			config_data_A[i*6+j] = CFGAR[j];
 			config_data_B[i*6+j] = CFGBR[j];
@@ -215,10 +285,11 @@ HAL_StatusTypeDef ADBMS_HW_Init(){
 	wake_up();
 	HAL_Delay(1);		// timeout for stability
 	HAL_StatusTypeDef status = HAL_OK;
+	status |= Command(MUTE);
 	status |= Write_Registergroup(WRCFGA, config_data_A);
 	status |= Write_Registergroup(WRCFGB, config_data_B);
-	uint8_t read_data_A[num_of_clients*6];
-	uint8_t read_data_B[num_of_clients*6];
+	uint8_t read_data_A[NUM_OF_CLIENTS*6];
+	uint8_t read_data_B[NUM_OF_CLIENTS*6];
 	status |= Read_Registergroup(RDCFGA, read_data_A);
 	status |= Read_Registergroup(RDCFGB, read_data_B);
 
@@ -226,7 +297,7 @@ HAL_StatusTypeDef ADBMS_HW_Init(){
 		return status;
 	}
 	uint8_t not_valid = 0;
-	for(uint16_t i=0; i<num_of_clients; i++){
+	for(uint16_t i=0; i<NUM_OF_CLIENTS; i++){
 		for(uint16_t j=1; j<6; j++){
 			not_valid += (config_data_A[i*6+j] - read_data_A[i*6+j]);
 			not_valid += (config_data_B[i*6+j] - read_data_B[i*6+j]);

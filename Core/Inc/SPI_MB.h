@@ -33,7 +33,7 @@
 
 #define WRSCTRL  0x0014
 #define WRPWM    0x0020
-#define WRPSB    0x001B
+#define WRPSB    0x001C
 #define RDSCTRL  0x0016
 #define RDPWM    0x0022
 #define RDPSB    0x001E
@@ -48,30 +48,32 @@
 #define WRCOMM   0x0721
 #define RDCOMM   0x0722
 #define STCOMM   0x0723
-#define Mute     0x0024
-#define Unmute   0x0025
+#define MUTE     0x0028
+#define UNMUTE   0x0029
 
 #define ADCV	 0x0360		// 3kHz  Cell
 //#define ADCV	 0x02E0		// 14kHz Cell
 #define ADAX	 0x04E0		// 14kHz GPIO
 
 // Settings
-#define num_of_clients 5
-#define dummy 0xAA
+#define NUM_OF_CLIENTS 3
+#define DUMMY 0xAA
 
 // HAL Handle
 extern SPI_HandleTypeDef hspi1;
 
 // SPI MB Functions
 void wake_up();
-uint16_t Calculate_CRC(uint8_t *data, uint16_t size);
+//uint16_t Calculate_CRC(uint8_t *data, uint16_t size);
 uint16_t generatePEC(uint8_t data[], size_t length);
-HAL_StatusTypeDef SPI_Transceive(uint8_t *tx_data, uint8_t *rx_data, uint16_t size);
+//HAL_StatusTypeDef SPI_Transceive(uint8_t *tx_data, uint8_t *rx_data, uint16_t size);
 HAL_StatusTypeDef Command(uint16_t command);
 HAL_StatusTypeDef Write_Registergroup(uint16_t command, uint8_t *data);
 HAL_StatusTypeDef Read_Registergroup(uint16_t command, uint8_t *buffer);
 HAL_StatusTypeDef Read_Voltages(uint8_t *buffer);
 HAL_StatusTypeDef Read_Temp(uint8_t *buffer);
+//HAL_StatusTypeDef write_balancing_PWM(uint8_t enable_discharge, uint8_t *discharge_values);
+HAL_StatusTypeDef set_DCCx(uint32_t* cells_to_balance);
 HAL_StatusTypeDef ADBMS_HW_Init();
 
 #endif /* SRC_SPI_MB_H_ */

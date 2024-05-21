@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "SPI_MB.h"
+//#include "SPI_MB.h"
 #include "serial_monitor.h"
 #include "battery.h"
 #include "CAN_Bus.h"
@@ -69,19 +69,12 @@ static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  if (htim->Instance == TIM7)
-  {
-    // TIM7 overflow callback
-	GPIOA->BSRR = SDC_Out_Pin<<16;	// SDC low
-  }
-}
 
 /* USER CODE END 0 */
 
@@ -121,22 +114,21 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // User Variables
-  HAL_StatusTypeDef status;
-  Battery_StatusTypeDef battery_status = BATTERY_ERROR;
   uint16_t GPIOA_Input = 0x0000;
-  uint8_t volt_buffer[36*num_of_clients];
-  uint8_t temp_buffer[20*num_of_clients];
-  uint8_t can_error_code = 0;
+  //uint8_t volt_buffer[36*NUM_OF_CLIENTS];
+  //uint8_t temp_buffer[20*NUM_OF_CLIENTS];
   /*
   while(GPIOA_Input & ((V_FB_AIR_negative_Pin | V_FB_AIR_positive_Pin)| V_FB_PC_Relay_Pin)){		// check Relay Feedback
 	  HAL_Delay(10);
 	  GPIOA_Input = GPIOA->IDR;
   }
   */
+  //>> Current measurement init
+  ISA_IVT_Init();
 
   //>> SDC reset
   set_relays(0);
-  status = SDC_reset();
+  SDC_reset();
 
   /* USER CODE END 2 */
 
@@ -152,93 +144,50 @@ int main(void)
 
 	//>> GPIOs lesen
 	GPIOA_Input = GPIOA->IDR;
-	can_error_code = 0;
 
 	//>> check 10 Hz Flag, timer 6
     if ((TIM6->SR & TIM_SR_UIF) != 0) {
         TIM6->SR &= ~TIM_SR_UIF;	// Clear the overflow flag
     	// This code runs every 100ms
+        battery_reset_error_flags();
 
-        //>> Zell-Daten lesen
-    	status = Read_Voltages(volt_buffer);
-    	status |= Read_Temp(temp_buffer);
-
-    	//>> Daten-Prüfen
-    	if(status == HAL_OK){
-    		battery_status = check_battery(volt_buffer, temp_buffer);
-    		if(battery_status){
-    			can_error_code |= Battery_error;
-    			if((battery_status & BATTERY_VOLT_ERROR)==BATTERY_VOLT_ERROR){
-    				can_error_code |= Voltage_error;
-    			}
-    			if((battery_status & BATTERY_TEMP_ERROR)==BATTERY_TEMP_ERROR){
-    				can_error_code |= Temperature_error;
-    			}
-    		}
-    	}else{
-    		can_error_code |= SPI_error;
-    	}
-    	//>> check can overflow
-    	if(FIFO_ovf()){
-    		can_error_code |= CAN_buffer_ovf;
+    	//>> Check-Batterie
+    	if(!check_battery()){
+    		User_LED_GPIO_Port->ODR ^= User_LED_Pin; // Toggle user LED if battery is ok
     	}
 
-    	//>> Balancing
-    	if(GPIOA_Input & Charger_Con_Pin){
-    		if(balancing()){
-    			Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin;	// high
+    	//>> charging logic
+    	if(GPIOA_Input & Charger_Con_Pin){		// charger connected
+    		if((battery_values.status&STATUS_CHARGING) == 0){
+    			set_relays(AIR_POSITIVE | AIR_NEGATIVE);	// close AIR relais
     		}else{
-    			Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
+    			//if(balancing((uint16_t*)(volt_buffer))){
+    				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin;	// high
+    			//}else{
+    			//	Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
+    			//}
     		}
     	}else{
-    		Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
-    	}
-
-    	//>> Serial Monitor
-    	if(GPIOA_Input & SDC_Out_Pin){
-    		SerialMonitor(0xC1, (uint8_t *)NULL, 0);
-    	}else{
-    		SerialMonitor(0xC0, (uint8_t *)NULL, 0);
-    	}
-    	if(can_error_code&SPI_error){
-    		SerialMonitor(0xD0, (uint8_t *)NULL, 0);
-    	}
-    	if(can_error_code&Voltage_error){
-    		SerialMonitor(0xD1, (uint8_t *)NULL, 0);
-    	}
-    	if(can_error_code&Temperature_error){
-    		SerialMonitor(0xD2, (uint8_t *)NULL, 0);
-    	}
-    	if(can_error_code&Battery_error){
-			SerialMonitor(0xD3, (uint8_t *)NULL, 0);
-		}
-    	if(can_error_code&CAN_buffer_ovf){
-			SerialMonitor(0xD4, (uint8_t *)NULL, 0);
-		}
-
-    	if(status == HAL_OK){
-    		User_LED_GPIO_Port->ODR ^= User_LED_Pin; // Toggle user LED
-    		SerialMonitor(volt, volt_buffer, sizeof(volt_buffer));
-    		SerialMonitor(temp, temp_buffer, 16*num_of_clients);
+    		if((battery_values.status&STATUS_CHARGING) == STATUS_CHARGING){
+				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
+				set_relays(0);		// open AIR relais
+			}
     	}
 
     	//>> send CAN information
-    	send_data2ECU(GPIOA_Input, can_error_code);
+    	send_data2ECU(GPIOA_Input);
 
+    	//>> Serial Monitor
+    	SerialMonitor(all_values, (uint8_t*)(&battery_values), sizeof(battery_values));
+
+    	//>> check can overflow
+    	if(FIFO_ovf()){
+    		set_battery_error_flag(ERROR_CAN);
+    	}
 
     }else{		// outside 10Hz timer 6
     	//>> receive one CAN command
-    	uint8_t RxData[8];
-    	uint32_t addres = 0;
-    	addres = read_CAN(RxData);
-    	if(addres == local_addr_ECU){
-    		set_relays(RxData[0]);
-    		if(RxData[0] & Battery_SW_reset){
-    			status = SDC_reset();
-    		}
-    	}else if(addres == local_addr_IVS){
-    		// do some current things
-    	}
+    	CAN_receive_packet();
     }
   }
   /* USER CODE END 3 */
@@ -342,20 +291,25 @@ static void MX_CAN1_Init(void)
   sFilterConfig.FilterBank = 0; // Use first filter bank
   sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
   sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-  sFilterConfig.FilterIdHigh = ((local_addr_ECU >> 13)& 0xFFFF);
-  sFilterConfig.FilterIdLow =  ((local_addr_ECU << 3) & 0xFFF8);
+  sFilterConfig.FilterIdHigh = ((ADDR_ECU_RX >> 13)& 0xFFFF);
+  sFilterConfig.FilterIdLow =  ((ADDR_ECU_RX << 3) & 0xFFF8);
   sFilterConfig.FilterMaskIdHigh = 0xFFFF;
   sFilterConfig.FilterMaskIdLow = 0xFFF8;
   sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
   sFilterConfig.FilterActivation = ENABLE;
-  //sFilterConfig.SlaveStartFilterBank = 14; // Only necessary for dual CAN setups
+  sFilterConfig.SlaveStartFilterBank = 14; // Only necessary for dual CAN setups
 
   HAL_StatusTypeDef init_status = HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
   // Configure Filter for IVS on FIFO 1
   sFilterConfig.FilterBank = 1; // Use second filter bank
+  sFilterConfig.FilterMode = 	CAN_FILTERMODE_IDLIST;
+  sFilterConfig.FilterScale = 	CAN_FILTERSCALE_16BIT;
+  sFilterConfig.FilterIdHigh = 		IVT_MSG_RESPONSE << 5;
+  sFilterConfig.FilterIdLow =  		IVT_MSG_RESULT_I << 5;
+  sFilterConfig.FilterMaskIdHigh = 	IVT_MSG_RESULT_T << 5;
+  sFilterConfig.FilterMaskIdLow = 	IVT_MSG_RESULT_AS << 5;
   sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO1;
-  sFilterConfig.FilterIdHigh = ((local_addr_IVS >> 13)& 0xFFFF);
-  sFilterConfig.FilterIdLow =  ((local_addr_IVS << 3) & 0xFFF8);
+  sFilterConfig.FilterActivation = ENABLE;
 
   init_status |= HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
   init_status |= HAL_CAN_Start(&hcan1); //start CAN
@@ -478,7 +432,7 @@ static void MX_TIM7_Init(void)
   }
   /* USER CODE BEGIN TIM7_Init 2 */
 
-  HAL_TIM_Base_Start_IT(&htim7);		// start timer7 for 500ms timeout
+  //HAL_TIM_Base_Start_IT(&htim7);		// start timer7 for 500ms timeout
 
   /* USER CODE END TIM7_Init 2 */
 
@@ -575,6 +529,16 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM7)
+  {
+    // TIM7 overflow callback
+	//GPIOA->BSRR = SDC_Out_Pin<<16;	// SDC low
+	//set_battery_error_flag(ERROR_SDC);
+  }
+}
+
 /* USER CODE END 4 */
 
 /**
@@ -588,8 +552,7 @@ void Error_Handler(void)
   //__disable_irq();
   while (1)
   {
-	  SerialMonitor(error, (uint8_t *)NULL, 0);
-	  send_data2ECU(0, 0xFF);
+	  send_data2ECU(0);
 	  // watchdog occurs after 100 ms
 	  HAL_Delay(1000);
   }
