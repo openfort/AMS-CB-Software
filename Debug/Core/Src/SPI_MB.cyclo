@@ -1,11 +1,11 @@
-SPI_MB.c:16:6:delay_1us	2
-SPI_MB.c:20:6:wake_up	4
+SPI_MB.c:16:6:delay_1us	3
+SPI_MB.c:20:6:wake_up	5
 SPI_MB.c:32:19:SPI_Transceive	1
-SPI_MB.c:47:10:generatePEC	3
+SPI_MB.c:47:10:generatePEC	4
 SPI_MB.c:75:19:Command	1
 SPI_MB.c:89:19:Write_Registergroup	3
 SPI_MB.c:111:19:Read_Registergroup	5
 SPI_MB.c:140:19:Read_Voltages	6
-SPI_MB.c:165:19:Read_Temp	12
-SPI_MB.c:208:19:set_DCCx	6
-SPI_MB.c:243:19:ADBMS_HW_Init	7
+SPI_MB.c:165:19:Read_Temp	11
+SPI_MB.c:208:19:set_DCCx	3
+SPI_MB.c:243:19:ADBMS_HW_Init	6
