@@ -205,39 +205,6 @@ HAL_StatusTypeDef Read_Temp(uint8_t *buffer){		// buffer NUM_OF_CLIENTS * 20
 	return status;
 }
 
-HAL_StatusTypeDef write_balancing_PWM(uint8_t enable_discharge, uint8_t *discharge_values){
-	static uint8_t enable = 0;
-	HAL_StatusTypeDef status = HAL_OK;
-
-	if(enable_discharge){
-		// write discharge_values to ADBMS cients
-
-		uint8_t sbuffer[NUM_OF_CLIENTS*12];		// short buffer for single client
-		sbuffer[9] = 0;
-		sbuffer[10]= 0;
-		sbuffer[11]= 0;
-		wake_up();
-		for(uint8_t i=0; i<NUM_OF_CLIENTS; i++){
-			for(uint8_t j=0; j<9; j++){
-				sbuffer[j] = (discharge_values[i*18 + j*2 +1]<<4) | discharge_values[i*18 + j*2];
-			}
-			status |= Write_Registergroup(WRPWM, sbuffer);
-			status |= Write_Registergroup(WRPSB, sbuffer+6);
-		}
-	}
-
-	if(enable_discharge != enable){
-		enable = enable_discharge;
-		wake_up();
-		if(enable_discharge){
-			status|= Command(UNMUTE);
-		}else{
-			status |= Command(MUTE);
-		}
-	}
-	return status;
-}
-
 HAL_StatusTypeDef set_DCCx(uint32_t* cells_to_balance){
 	HAL_StatusTypeDef status = HAL_OK;
 	uint8_t enable_discharge = 0;

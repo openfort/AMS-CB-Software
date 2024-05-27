@@ -35,7 +35,7 @@ uint8_t get_battery_status_code(uint16_t GPIO_Input){
 	status_code |= (GPIO_Input&V_FB_AIR_positive_Pin)==V_FB_AIR_positive_Pin ? STATUS_AIR_POSITIVE : 0;
 	status_code |= (GPIO_Input&V_FB_AIR_negative_Pin)==V_FB_AIR_negative_Pin ? STATUS_AIR_NEGATIVE : 0;
 	status_code |= (GPIO_Input&V_FB_PC_Relay_Pin)==V_FB_PC_Relay_Pin ? STATUS_PRECHARGE : 0;
-	battery_values.status |= status_code;
+	battery_values.status = status_code;
 	return status_code;
 }
 
@@ -68,15 +68,17 @@ BatterySystemTypeDef* calc_Battery_values(uint8_t *volt_buffer, uint8_t *temp_bu
 	uint16_t min = 50000;
 	uint16_t max = 0;
 	for(uint16_t i = 0; i<(18*NUM_OF_CLIENTS); i++){
-		total += volt_data[i];
-		if(volt_data[i] < min){
-			min = volt_data[i];
-		}
-		if(volt_data[i] > max){
-			max = volt_data[i];
+		if((i != 142) && (i != 143)){		// 2 zellen nicht bestückt
+			total += volt_data[i];
+			if(volt_data[i] < min){
+				min = volt_data[i];
+			}
+			if(volt_data[i] > max){
+				max = volt_data[i];
+			}
 		}
 	}
-	battery_values.meanCellVoltage = (uint16_t)(total / (18*NUM_OF_CLIENTS));
+	battery_values.meanCellVoltage = (uint16_t)(total / (18*NUM_OF_CLIENTS-2));		// 2 zellen nicht bestückt
 	battery_values.totalVoltage = (uint16_t)(total /= 1000); 		// total voltage in 0.1V/bit
 	battery_values.lowestCellVoltage = min;
 	battery_values.highestCellVoltage = max;
@@ -85,7 +87,7 @@ BatterySystemTypeDef* calc_Battery_values(uint8_t *volt_buffer, uint8_t *temp_bu
 	min = 50000;
 	max = 0;
 	for(uint16_t i = 0; i<(8*NUM_OF_CLIENTS); i++){
-		if(i != 1){		// temp sensor 1 defekt
+		if((i != 1) && (i != 26)){		// temp sensor 1 defekt
 			total += temp_data[i];
 			if(temp_data[i] < min){
 				min = temp_data[i];
@@ -95,7 +97,7 @@ BatterySystemTypeDef* calc_Battery_values(uint8_t *volt_buffer, uint8_t *temp_bu
 			}
 		}
 	}
-	battery_values.meanCellTemp = (uint16_t)(total / (8*NUM_OF_CLIENTS-1));		// 1 sensor defekt
+	battery_values.meanCellTemp = (uint16_t)(total / (8*NUM_OF_CLIENTS-2));		// 1 sensor defekt
 	battery_values.highestCellTemp = min;
 	battery_values.lowestCellTemp = max;
 	return &battery_values;

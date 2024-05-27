@@ -5,9 +5,9 @@
 ../Core/Src/battery.c:50:6:set_battery_error_flag	16	static
 ../Core/Src/battery.c:54:6:set_reset_battery_status_flag	16	static
 ../Core/Src/battery.c:62:23:calc_Battery_values	40	static
-../Core/Src/battery.c:104:9:volt2celsius	120	static
-../Core/Src/battery.c:121:23:refresh_SDC	8	static
-../Core/Src/battery.c:146:23:SDC_reset	184	static
-../Core/Src/battery.c:173:23:check_battery	16	static
-../Core/Src/battery.c:192:6:set_relays	24	static
-../Core/Src/battery.c:214:9:balancing	32	static
+../Core/Src/battery.c:106:9:volt2celsius	120	static
+../Core/Src/battery.c:123:23:refresh_SDC	8	static
+../Core/Src/battery.c:148:23:SDC_reset	464	static
+../Core/Src/battery.c:175:23:check_battery	16	static
+../Core/Src/battery.c:194:6:set_relays	24	static
+../Core/Src/battery.c:216:9:balancing	56	static

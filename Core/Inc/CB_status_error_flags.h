@@ -38,3 +38,13 @@
 #define ERROR_RESERVE1		(1<<7)		// unused, set to 0
 
 #endif /* INC_CB_STATUS_ERROR_FLAGS_H_ */
+
+//>> CAN send data frame
+// 0 status flags
+// 1 error flags
+// 2 HVvoltage LOW
+// 3 HVvoltage HIGH
+// 4 HVcurrent
+// 5 accu temp
+// 6 SOC
+// 7 reserve

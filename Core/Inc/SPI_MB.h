@@ -56,7 +56,7 @@
 #define ADAX	 0x04E0		// 14kHz GPIO
 
 // Settings
-#define NUM_OF_CLIENTS 3
+#define NUM_OF_CLIENTS 8
 #define DUMMY 0xAA
 
 // HAL Handle

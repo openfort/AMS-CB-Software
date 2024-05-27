@@ -43,20 +43,20 @@ HAL_StatusTypeDef send_CAN_IVT_nbytes(uint32_t addres, uint8_t *TxBuffer, uint8_
     return status;
 }
 
-uint16_t read_CAN(uint8_t *RxData){
+uint32_t read_CAN(uint8_t *RxData){
 	CAN_RxHeaderTypeDef RxHeader;
 	// Check if a message is received in CAN RX FIFO 0
 	if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) > 0) {
 	  if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK) {
 		// Process the received message
-	    return (uint16_t)(RxHeader.ExtId);
+	    return RxHeader.ExtId;
 	  }
 	}
 	// Check if a message is received in CAN RX FIFO 1
 	if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO1) > 0) {
-	  if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK) {
+	  if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO1, &RxHeader, RxData) == HAL_OK) {
 		// Process the received message
-	    return (uint16_t)(RxHeader.ExtId);
+	    return RxHeader.StdId;
 	  }
 	}
 	return 0;

@@ -115,14 +115,7 @@ int main(void)
 
   // User Variables
   uint16_t GPIOA_Input = 0x0000;
-  //uint8_t volt_buffer[36*NUM_OF_CLIENTS];
-  //uint8_t temp_buffer[20*NUM_OF_CLIENTS];
-  /*
-  while(GPIOA_Input & ((V_FB_AIR_negative_Pin | V_FB_AIR_positive_Pin)| V_FB_PC_Relay_Pin)){		// check Relay Feedback
-	  HAL_Delay(10);
-	  GPIOA_Input = GPIOA->IDR;
-  }
-  */
+
   //>> Current measurement init
   ISA_IVT_Init();
 
@@ -159,7 +152,7 @@ int main(void)
     	//>> charging logic
     	if(GPIOA_Input & Charger_Con_Pin){		// charger connected
     		if((battery_values.status&STATUS_CHARGING) == 0){
-    			set_relays(AIR_POSITIVE | AIR_NEGATIVE);	// close AIR relais
+    			//set_relays(AIR_POSITIVE | AIR_NEGATIVE);	// close AIR relais
     		}else{
     			//if(balancing((uint16_t*)(volt_buffer))){
     				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin;	// high
@@ -170,7 +163,7 @@ int main(void)
     	}else{
     		if((battery_values.status&STATUS_CHARGING) == STATUS_CHARGING){
 				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
-				set_relays(0);		// open AIR relais
+				//set_relays(0);		// open AIR relais
 			}
     	}
 
