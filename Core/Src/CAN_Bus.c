@@ -7,14 +7,6 @@
 
 #include "CAN_Bus.h"
 
-uint64_t CAN_convert(uint8_t *data){
-	uint64_t data64 = 0;
-	for(uint8_t i=0; i<8; i++){
-		data64 |= data[i]<<(i*8);
-	}
-	return data64;
-}
-
 HAL_StatusTypeDef send_CAN(uint32_t addres, uint8_t *TxBuffer){		// send 8 Bytes
 	static uint32_t TxMailbox[20];
 	static CAN_TxHeaderTypeDef TxHeader;

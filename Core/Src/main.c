@@ -135,13 +135,13 @@ int main(void)
 	//>> Performance Monitor
 	//HAL_IWDG_Refresh(&hiwdg);
 
-	//>> GPIOs lesen
-	GPIOA_Input = GPIOA->IDR;
-
 	//>> check 10 Hz Flag, timer 6
     if ((TIM6->SR & TIM_SR_UIF) != 0) {
         TIM6->SR &= ~TIM_SR_UIF;	// Clear the overflow flag
     	// This code runs every 100ms
+
+    	//>> GPIOs lesen
+    	GPIOA_Input = GPIOA->IDR;
         battery_reset_error_flags();
 
     	//>> Check-Batterie
@@ -171,7 +171,7 @@ int main(void)
     	send_data2ECU(GPIOA_Input);
 
     	//>> Serial Monitor
-    	SerialMonitor(all_values, (uint8_t*)(&battery_values), sizeof(battery_values));
+    	SerialMonitor((uint8_t*)(&battery_values), sizeof(battery_values));
 
     	//>> check can overflow
     	if(FIFO_ovf()){

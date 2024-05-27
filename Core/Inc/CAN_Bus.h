@@ -62,7 +62,7 @@
 #define CYCLIC 2
 
 // settings
-#define CYCLETIME 1000  // in ms
+#define CYCLETIME 100  // in ms
 
 // CAN receive Flags in 8 bit format, can byte 0 LSB
 #define AIR_POSITIVE 		(1<<0)
@@ -82,7 +82,6 @@
 
 extern CAN_HandleTypeDef hcan1;
 
-uint64_t CAN_convert(uint8_t *data);
 HAL_StatusTypeDef send_data2ECU(uint16_t GPIO_Input);
 HAL_StatusTypeDef ISA_IVT_Init();
 void CAN_receive_packet();
