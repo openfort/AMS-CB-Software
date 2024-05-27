@@ -1,8 +1,0 @@
-../Core/Src/CAN_Bus.c:10:10:CAN_convert	0	static
-../Core/Src/CAN_Bus.c:18:19:send_CAN	8	static
-../Core/Src/CAN_Bus.c:32:19:send_CAN_IVT_nbytes	8	static
-../Core/Src/CAN_Bus.c:46:10:read_CAN	40	static
-../Core/Src/CAN_Bus.c:65:9:FIFO_ovf	8	static
-../Core/Src/CAN_Bus.c:74:19:send_data2ECU	16	static
-../Core/Src/CAN_Bus.c:89:19:ISA_IVT_Init	56	static
-../Core/Src/CAN_Bus.c:131:6:CAN_receive_packet	16	static
