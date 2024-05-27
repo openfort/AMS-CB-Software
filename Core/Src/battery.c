@@ -244,3 +244,22 @@ uint8_t balancing(uint16_t *volt_data){		// retrun if charger should be active
 		return 1;
 	}
 }
+
+void charging(uint16_t input_data){
+   	if(input_data & Charger_Con_Pin){		// charger connected
+		if((battery_values.status&STATUS_CHARGING) == 0){
+			//set_relays(AIR_POSITIVE | AIR_NEGATIVE);	// close AIR relais
+		}else{
+			//if(balancing((uint16_t*)(battery_values.volt_buffer))){
+				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin;	// high
+			//}else{
+			//	Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
+			//}
+		}
+	}else{
+		if((battery_values.status&STATUS_CHARGING) == STATUS_CHARGING){
+			Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
+			//set_relays(0);		// open AIR relais
+		}
+	}
+}

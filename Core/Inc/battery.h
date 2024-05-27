@@ -68,5 +68,5 @@ Battery_StatusTypeDef SDC_reset();
 Battery_StatusTypeDef refresh_SDC();
 Battery_StatusTypeDef check_battery();
 void set_relays(uint8_t CAN_Data);
-uint8_t balancing(uint16_t *volt_data);
+void charging(uint16_t input_data);
 #endif /* INC_BATTERY_H_ */

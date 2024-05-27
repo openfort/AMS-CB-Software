@@ -142,7 +142,6 @@ int main(void)
 
     	//>> GPIOs lesen
     	GPIOA_Input = GPIOA->IDR;
-        battery_reset_error_flags();
 
     	//>> Check-Batterie
     	if(!check_battery()){
@@ -150,22 +149,7 @@ int main(void)
     	}
 
     	//>> charging logic
-    	if(GPIOA_Input & Charger_Con_Pin){		// charger connected
-    		if((battery_values.status&STATUS_CHARGING) == 0){
-    			//set_relays(AIR_POSITIVE | AIR_NEGATIVE);	// close AIR relais
-    		}else{
-    			//if(balancing((uint16_t*)(volt_buffer))){
-    				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin;	// high
-    			//}else{
-    			//	Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
-    			//}
-    		}
-    	}else{
-    		if((battery_values.status&STATUS_CHARGING) == STATUS_CHARGING){
-				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
-				//set_relays(0);		// open AIR relais
-			}
-    	}
+    	charging(GPIOA_Input);
 
     	//>> send CAN information
     	send_data2ECU(GPIOA_Input);
@@ -173,12 +157,14 @@ int main(void)
     	//>> Serial Monitor
     	SerialMonitor((uint8_t*)(&battery_values), sizeof(battery_values));
 
+
+    	battery_reset_error_flags();
+
+    }else{		// outside 10Hz timer 6
     	//>> check can overflow
     	if(FIFO_ovf()){
     		set_battery_error_flag(ERROR_CAN);
     	}
-
-    }else{		// outside 10Hz timer 6
     	//>> receive one CAN command
     	CAN_receive_packet();
     }
