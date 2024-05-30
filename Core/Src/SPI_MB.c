@@ -205,7 +205,7 @@ HAL_StatusTypeDef Read_Temp(uint8_t *buffer){		// buffer NUM_OF_CLIENTS * 20
 	return status;
 }
 
-HAL_StatusTypeDef set_DCCx(uint32_t* cells_to_balance){
+HAL_StatusTypeDef set_DCCx(uint32_t* cells_to_balance){		// set discharge per cell to true/false
 	HAL_StatusTypeDef status = HAL_OK;
 	uint8_t enable_discharge = 0;
 

@@ -59,6 +59,28 @@ void set_reset_battery_status_flag(uint8_t set, uint8_t mask){
 	}
 }
 
+void set_relays(uint8_t CAN_Data){
+	static uint64_t last_value = 0;
+	if(last_value != CAN_Data){
+		if(CAN_Data & AIR_POSITIVE){
+			Drive_AIR_positive_GPIO_Port->BSRR = Drive_AIR_positive_Pin;	// high
+		}else{
+			Drive_AIR_positive_GPIO_Port->BSRR = Drive_AIR_positive_Pin<<16;	// low
+		}
+		if(CAN_Data & AIR_NEGATIVE){
+			Drive_AIR_negative_GPIO_Port->BSRR = Drive_AIR_negative_Pin;	// high
+		}else{
+			Drive_AIR_negative_GPIO_Port->BSRR = Drive_AIR_negative_Pin<<16;	// low
+		}
+		if(CAN_Data & PRECHARGE_RELAY){
+			Drive_Precharge_Relay_GPIO_Port->BSRR = Drive_Precharge_Relay_Pin;	// high
+		}else{
+			Drive_Precharge_Relay_GPIO_Port->BSRR = Drive_Precharge_Relay_Pin<<16;	// low
+		}
+	}
+	last_value = CAN_Data;
+}
+
 BatterySystemTypeDef* calc_Battery_values(uint8_t *volt_buffer, uint8_t *temp_buffer){
 	uint16_t *volt_data = (uint16_t*)(volt_buffer);
 	uint16_t *temp_data = (uint16_t*)(temp_buffer);
@@ -87,7 +109,7 @@ BatterySystemTypeDef* calc_Battery_values(uint8_t *volt_buffer, uint8_t *temp_bu
 	min = 50000;
 	max = 0;
 	for(uint16_t i = 0; i<(8*NUM_OF_CLIENTS); i++){
-		if((i != 1) && (i != 26)){		// temp sensor 1 defekt
+		if((i != 1) && (i != 26)){		// 2 sensoren defekt
 			total += temp_data[i];
 			if(temp_data[i] < min){
 				min = temp_data[i];
@@ -97,7 +119,7 @@ BatterySystemTypeDef* calc_Battery_values(uint8_t *volt_buffer, uint8_t *temp_bu
 			}
 		}
 	}
-	battery_values.meanCellTemp = (uint16_t)(total / (8*NUM_OF_CLIENTS-2));		// 1 sensor defekt
+	battery_values.meanCellTemp = (uint16_t)(total / (8*NUM_OF_CLIENTS-2));		// 2 sensoren defekt
 	battery_values.highestCellTemp = min;
 	battery_values.lowestCellTemp = max;
 	return &battery_values;
@@ -121,12 +143,6 @@ uint8_t volt2celsius(uint16_t volt_100uV){		// convert volt to celsius with poly
 }
 
 Battery_StatusTypeDef refresh_SDC(){
-	/*
-	if(SDC_IN_GPIO_Port->IDR & SDC_IN_Pin){
-		SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin<<16;	// SDC low
-		set_battery_error_flag(ERROR_SDC);
-		return BATTERY_ERROR;
-	*/
 	if ((battery_values.error&0x1F) == 0){
 		// SDC OK
 		// reset tim7 timeout counter
@@ -145,21 +161,31 @@ Battery_StatusTypeDef refresh_SDC(){
 	return BATTERY_OK;
 }
 
-Battery_StatusTypeDef SDC_reset(){
-	/*
-	if(SDC_IN_GPIO_Port->IDR & SDC_IN_Pin){
-		SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin<<16;	// SDC low
-		return BATTERY_ERROR;
+Battery_StatusTypeDef check_battery(){
+	HAL_StatusTypeDef status = Read_Voltages(battery_values.volt_buffer);
+	status |= Read_Temp(battery_values.temp_buffer);
+
+	if(status){
+		set_battery_error_flag(ERROR_SPI|ERROR_BATTERY);
+	}else{
+		User_LED_GPIO_Port->ODR ^= User_LED_Pin; // Toggle user LED if communication works
+		calc_Battery_values(battery_values.volt_buffer, battery_values.temp_buffer);
+		// check limits
+		if((battery_values.highestCellVoltage > MAX_VOLT) || (battery_values.lowestCellVoltage < MIN_VOLT)){
+			set_battery_error_flag(ERROR_VOLT|ERROR_BATTERY);
+		}
+		if((battery_values.highestCellTemp < MAX_TEMP) || (battery_values.lowestCellTemp > MIN_TEMP)){
+			set_battery_error_flag(ERROR_TEMP|ERROR_BATTERY);
+		}
 	}
-	*/
+	return refresh_SDC();
+}
+
+Battery_StatusTypeDef SDC_reset(){
 	error_counter = 2;
-	uint8_t volt_buffer[36*NUM_OF_CLIENTS];
-	uint8_t temp_buffer[20*NUM_OF_CLIENTS];
 	HAL_StatusTypeDef status_hw;
 	status_hw = ADBMS_HW_Init();
-	status_hw |= Read_Voltages(volt_buffer);
-	status_hw |= Read_Temp(temp_buffer);
-	status_hw |= check_battery(volt_buffer, temp_buffer);
+	status_hw |= check_battery();
 	// SDC on / off
 	if(status_hw == HAL_OK){
 		TIM7->CNT = 0;
@@ -170,47 +196,6 @@ Battery_StatusTypeDef SDC_reset(){
 		SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin<<16;	// SDC low
 		return BATTERY_ERROR;
 	}
-}
-
-Battery_StatusTypeDef check_battery(){
-	HAL_StatusTypeDef status = Read_Voltages(battery_values.volt_buffer);
-	status |= Read_Temp(battery_values.temp_buffer);
-
-	if(status){
-		set_battery_error_flag(ERROR_SPI|ERROR_BATTERY);
-	}else{
-		calc_Battery_values(battery_values.volt_buffer, battery_values.temp_buffer);
-		// check limits
-		if((battery_values.highestCellVoltage > MAX_VOLT) || (battery_values.lowestCellVoltage < MIN_VOLT)){
-			set_battery_error_flag(ERROR_VOLT|ERROR_BATTERY);
-		}
-		if((battery_values.highestCellTemp < MAX_TEMP) || (battery_values.lowestCellTemp > MIN_TEMP)){
-			set_battery_error_flag(ERROR_TEMP|ERROR_BATTERY);
-		}
-	}
-	return refresh_SDC();;
-}
-
-void set_relays(uint8_t CAN_Data){
-	static uint64_t last_value = 0;
-	if(last_value != CAN_Data){
-		if(CAN_Data & AIR_POSITIVE){
-			Drive_AIR_positive_GPIO_Port->BSRR = Drive_AIR_positive_Pin;	// high
-		}else{
-			Drive_AIR_positive_GPIO_Port->BSRR = Drive_AIR_positive_Pin<<16;	// low
-		}
-		if(CAN_Data & AIR_NEGATIVE){
-			Drive_AIR_negative_GPIO_Port->BSRR = Drive_AIR_negative_Pin;	// high
-		}else{
-			Drive_AIR_negative_GPIO_Port->BSRR = Drive_AIR_negative_Pin<<16;	// low
-		}
-		if(CAN_Data & PRECHARGE_RELAY){
-			Drive_Precharge_Relay_GPIO_Port->BSRR = Drive_Precharge_Relay_Pin;	// high
-		}else{
-			Drive_Precharge_Relay_GPIO_Port->BSRR = Drive_Precharge_Relay_Pin<<16;	// low
-		}
-	}
-	last_value = CAN_Data;
 }
 
 uint8_t balancing(uint16_t *volt_data){		// retrun if charger should be active
@@ -248,6 +233,7 @@ uint8_t balancing(uint16_t *volt_data){		// retrun if charger should be active
 void charging(uint16_t input_data){
    	if(input_data & Charger_Con_Pin){		// charger connected
 		if((battery_values.status&STATUS_CHARGING) == 0){
+			set_reset_battery_status_flag(1, STATUS_CHARGING);
 			//set_relays(AIR_POSITIVE | AIR_NEGATIVE);	// close AIR relais
 		}else{
 			//if(balancing((uint16_t*)(battery_values.volt_buffer))){
@@ -258,6 +244,7 @@ void charging(uint16_t input_data){
 		}
 	}else{
 		if((battery_values.status&STATUS_CHARGING) == STATUS_CHARGING){
+			set_reset_battery_status_flag(0, STATUS_CHARGING);
 			Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
 			//set_relays(0);		// open AIR relais
 		}

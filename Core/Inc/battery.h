@@ -11,7 +11,6 @@
 #include "main.h"
 #include "SPI_MB.h"
 #include "CAN_Bus.h"
-#include "CB_status_error_flags.h"
 
 /**
   * @brief  Battery Status
@@ -50,22 +49,21 @@ typedef struct {
     int32_t actualCurrent;
     int32_t CurrentCounter;
 
-	uint8_t volt_buffer[36*NUM_OF_CLIENTS];
-	uint8_t temp_buffer[20*NUM_OF_CLIENTS];
+	uint8_t volt_buffer[36*NUM_OF_CLIENTS];	//uint16_t volt_buffer[18*NUM_OF_CLIENTS];
+	uint8_t temp_buffer[20*NUM_OF_CLIENTS]; //uint16_t temp_buffer[10*NUM_OF_CLIENTS];
 } BatterySystemTypeDef;
 
 // extern variables
 extern BatterySystemTypeDef battery_values;
 
-// Function prototypes
+// external Function prototypes
 uint8_t get_battery_status_code(uint16_t GPIO_Input);
 void battery_reset_error_flags();
 uint8_t get_battery_error_code();
 void set_battery_error_flag(uint8_t mask);
-void set_reset_battery_status_flag(uint8_t set, uint8_t mask);
+//void set_reset_battery_status_flag(uint8_t set, uint8_t mask);
 uint8_t volt2celsius(uint16_t volt_100uV);
 Battery_StatusTypeDef SDC_reset();
-Battery_StatusTypeDef refresh_SDC();
 Battery_StatusTypeDef check_battery();
 void set_relays(uint8_t CAN_Data);
 void charging(uint16_t input_data);

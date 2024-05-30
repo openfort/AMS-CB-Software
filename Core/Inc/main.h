@@ -32,6 +32,8 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "CB_status_error_flags.h"
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

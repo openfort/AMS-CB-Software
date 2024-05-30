@@ -129,45 +129,44 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	//HAL_IWDG_Refresh(&hiwdg);		// optional System Watchdog
+
+	//>> check 10 Hz Flag, timer 6
+	if ((TIM6->SR & TIM_SR_UIF) != 0) {
+		TIM6->SR &= ~TIM_SR_UIF;	// Clear the overflow flag
+		// This code runs every 100ms
+
+		//>> GPIOs lesen
+		GPIOA_Input = GPIOA->IDR;
+
+		//>> Check-Batterie
+		check_battery();
+
+		//>> charging logic
+		charging(GPIOA_Input);
+
+		//>> send system information to the ECU
+		send_data2ECU(GPIOA_Input);
+
+		//>> send the BatterySystem struct to the external Device via COM-Port
+		SerialMonitor((uint8_t*)(&battery_values), sizeof(battery_values));
+
+		//>> reset error flags after transmisson
+		battery_reset_error_flags();
+		//>> check can overflow
+		if(FIFO_ovf()){
+			set_battery_error_flag(ERROR_CAN);
+		}
+
+	}else{
+		// outside 10Hz timer 6
+
+		//>> receive one CAN command
+		CAN_receive_packet();
+	}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	//>> Performance Monitor
-	//HAL_IWDG_Refresh(&hiwdg);
-
-	//>> check 10 Hz Flag, timer 6
-    if ((TIM6->SR & TIM_SR_UIF) != 0) {
-        TIM6->SR &= ~TIM_SR_UIF;	// Clear the overflow flag
-    	// This code runs every 100ms
-
-    	//>> GPIOs lesen
-    	GPIOA_Input = GPIOA->IDR;
-
-    	//>> Check-Batterie
-    	if(!check_battery()){
-    		User_LED_GPIO_Port->ODR ^= User_LED_Pin; // Toggle user LED if battery is ok
-    	}
-
-    	//>> charging logic
-    	charging(GPIOA_Input);
-
-    	//>> send CAN information
-    	send_data2ECU(GPIOA_Input);
-
-    	//>> Serial Monitor
-    	SerialMonitor((uint8_t*)(&battery_values), sizeof(battery_values));
-
-
-    	battery_reset_error_flags();
-
-    }else{		// outside 10Hz timer 6
-    	//>> check can overflow
-    	if(FIFO_ovf()){
-    		set_battery_error_flag(ERROR_CAN);
-    	}
-    	//>> receive one CAN command
-    	CAN_receive_packet();
-    }
   }
   /* USER CODE END 3 */
 }
@@ -292,6 +291,11 @@ static void MX_CAN1_Init(void)
 
   init_status |= HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig);
   init_status |= HAL_CAN_Start(&hcan1); //start CAN
+
+  if (init_status != HAL_OK)
+  {
+    Error_Handler();
+  }
 
   /* USER CODE END CAN1_Init 2 */
 
@@ -513,8 +517,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim->Instance == TIM7)
   {
     // TIM7 overflow callback
-	//GPIOA->BSRR = SDC_Out_Pin<<16;	// SDC low
-	//set_battery_error_flag(ERROR_SDC);
+	GPIOA->BSRR = SDC_Out_Pin<<16;	// SDC low
+	set_battery_error_flag(ERROR_SDC);
   }
 }
 

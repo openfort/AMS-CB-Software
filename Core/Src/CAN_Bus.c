@@ -80,42 +80,52 @@ HAL_StatusTypeDef send_data2ECU(uint16_t GPIO_Input){		// 8 Bytes for TxData, LS
 
 HAL_StatusTypeDef ISA_IVT_Init(){
 	HAL_StatusTypeDef status = HAL_OK;
+	uint8_t RxData[8];
 
 	// set sensor mode to STOP
 	uint8_t can_data0[] = {SET_MODE, 0x00, 0x01, 0x00, 0x00};
 	status |= send_CAN_IVT_nbytes(IVT_MSG_COMMAND, can_data0, 5);
-	HAL_Delay(5);
+	HAL_Delay(10);
+	read_CAN(RxData);
 
 	// set current measurement to CYCLIC 100 Hz
 	uint8_t can_data1[] = {(MUX_SETCONFIG|IVT_NCURRENT), CYCLIC, (CYCLETIME>>8)&0xFF, CYCLETIME&0xFF};
 	status |= send_CAN_IVT_nbytes(IVT_MSG_COMMAND, can_data1, 4);
-	HAL_Delay(5);
+	HAL_Delay(10);
+	read_CAN(RxData);
 
 	// disable Voltage Measurement
-	uint8_t can_data2[] = {(MUX_SETCONFIG|IVT_NU1), DISABLED, 0x00, 0x00};
+	uint8_t can_data2[] = {(MUX_SETCONFIG|IVT_NU1), DISABLED, (CYCLETIME>>8)&0xFF, CYCLETIME&0xFF};
 	status |= send_CAN_IVT_nbytes(IVT_MSG_COMMAND, can_data2, 4);
-	HAL_Delay(5);
-	uint8_t can_data3[] = {(MUX_SETCONFIG|IVT_NU2), DISABLED, 0x00, 0x00};
+	HAL_Delay(10);
+	read_CAN(RxData);
+	uint8_t can_data3[] = {(MUX_SETCONFIG|IVT_NU2), DISABLED, (CYCLETIME>>8)&0xFF, CYCLETIME&0xFF};
 	status |= send_CAN_IVT_nbytes(IVT_MSG_COMMAND, can_data3, 4);
-	HAL_Delay(5);
-	uint8_t can_data4[] = {(MUX_SETCONFIG|IVT_NU3), DISABLED, 0x00, 0x00};
+	HAL_Delay(10);
+	read_CAN(RxData);
+	uint8_t can_data4[] = {(MUX_SETCONFIG|IVT_NU3), DISABLED, (CYCLETIME>>8)&0xFF, CYCLETIME&0xFF};
 	status |= send_CAN_IVT_nbytes(IVT_MSG_COMMAND, can_data4, 4);
-	HAL_Delay(5);
+	HAL_Delay(10);
+	read_CAN(RxData);
 
 	// set current counter
 	uint8_t can_data5[] = {(MUX_SETCONFIG|IVT_NQ), CYCLIC, (CYCLETIME>>8)&0xFF, CYCLETIME&0xFF};
 	status |= send_CAN_IVT_nbytes(IVT_MSG_COMMAND, can_data5, 4);
-	HAL_Delay(5);
+	HAL_Delay(10);
+	read_CAN(RxData);
 
 	// store configuration
 	//uint8_t can_data6[] = {0x32};
 	//status |= send_CAN_IVT_nbytes(IVT_MSG_COMMAND, can_data6, 1);
 	//HAL_Delay(1000);
+	read_CAN(RxData);
 
 	// set sensor mode to RUN
 	HAL_Delay(100);
 	uint8_t can_datan[] = {SET_MODE, 0x01, 0x01, 0x00, 0x00};
 	status |= send_CAN_IVT_nbytes(IVT_MSG_COMMAND, can_datan, 5);
+	HAL_Delay(10);
+	read_CAN(RxData);
 
 	return status;
 }
