@@ -137,7 +137,8 @@ HAL_StatusTypeDef Read_Registergroup(uint16_t command, uint8_t *buffer){		// che
 	return status;
 }
 
-HAL_StatusTypeDef Read_Voltages(uint8_t *buffer){		// checked, NUM_OF_CLIENTS * 36
+HAL_StatusTypeDef Read_Voltages(uint16_t *data_buffer){		// checked, NUM_OF_CLIENTS * 18
+	uint8_t *buffer = (uint8_t*)(data_buffer);
 	HAL_StatusTypeDef status = HAL_TIMEOUT;
 	uint8_t sbuffer[NUM_OF_CLIENTS*6];		// short buffer for a single transmission
 	wake_up();
@@ -162,7 +163,8 @@ HAL_StatusTypeDef Read_Voltages(uint8_t *buffer){		// checked, NUM_OF_CLIENTS * 
 	return status;
 }
 
-HAL_StatusTypeDef Read_Temp(uint8_t *buffer){		// buffer NUM_OF_CLIENTS * 20
+HAL_StatusTypeDef Read_Temp(uint16_t *data_buffer){		// buffer NUM_OF_CLIENTS * 10
+	uint8_t *buffer = (uint8_t*)(data_buffer);
 	HAL_StatusTypeDef status;
 	uint8_t sbuffer[NUM_OF_CLIENTS*6];		// short buffer for a single transmission
 	wake_up();

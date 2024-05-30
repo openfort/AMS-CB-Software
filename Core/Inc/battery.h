@@ -22,8 +22,7 @@
 #define MAX_TEMP 6115		// max temperature at 60°
 
 
-typedef enum
-{
+typedef enum {
   BATTERY_OK       		= 0x00,
   BATTERY_ERROR    		= 0x01,
   BATTERY_TEMP_ERROR    = 0x03,
@@ -49,8 +48,8 @@ typedef struct {
     int32_t actualCurrent;
     int32_t CurrentCounter;
 
-	uint8_t volt_buffer[36*NUM_OF_CLIENTS];	//uint16_t volt_buffer[18*NUM_OF_CLIENTS];
-	uint8_t temp_buffer[20*NUM_OF_CLIENTS]; //uint16_t temp_buffer[10*NUM_OF_CLIENTS];
+	uint16_t volt_buffer[18*NUM_OF_CLIENTS];
+	uint16_t temp_buffer[10*NUM_OF_CLIENTS];
 } BatterySystemTypeDef;
 
 // extern variables

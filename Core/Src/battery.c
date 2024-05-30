@@ -81,10 +81,7 @@ void set_relays(uint8_t CAN_Data){
 	last_value = CAN_Data;
 }
 
-BatterySystemTypeDef* calc_Battery_values(uint8_t *volt_buffer, uint8_t *temp_buffer){
-	uint16_t *volt_data = (uint16_t*)(volt_buffer);
-	uint16_t *temp_data = (uint16_t*)(temp_buffer);
-
+BatterySystemTypeDef* calc_Battery_values(uint16_t *volt_data, uint16_t *temp_data){
 	// get total, mean, min, max
 	uint32_t total = 0;
 	uint16_t min = 50000;

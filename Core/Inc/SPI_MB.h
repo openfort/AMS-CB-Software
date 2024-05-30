@@ -62,8 +62,8 @@
 extern SPI_HandleTypeDef hspi1;
 
 // SPI MB Functions
-HAL_StatusTypeDef Read_Voltages(uint8_t *buffer);
-HAL_StatusTypeDef Read_Temp(uint8_t *buffer);
+HAL_StatusTypeDef Read_Voltages(uint16_t *data_buffer);
+HAL_StatusTypeDef Read_Temp(uint16_t *data_buffer);
 HAL_StatusTypeDef set_DCCx(uint32_t* cells_to_balance);
 HAL_StatusTypeDef ADBMS_HW_Init();
 
