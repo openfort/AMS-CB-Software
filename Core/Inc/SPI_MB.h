@@ -51,7 +51,7 @@
 #define MUTE     0x0028
 #define UNMUTE   0x0029
 
-#define ADCV	 0x0360		// 3kHz  Cell
+#define ADCV	 0x0360		// 3kHz  Cell, all Cells
 #define ADAX	 0x04E0		// 14kHz GPIO
 
 // Settings
