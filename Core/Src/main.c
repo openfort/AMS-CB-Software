@@ -158,11 +158,14 @@ int main(void)
 			set_battery_error_flag(ERROR_CAN);
 		}
 
+		set_time_per_measurement(TIM6->CNT + 100*((TIM6->SR & TIM_SR_UIF) != 0));
+
 	}else{
 		// outside 10Hz timer 6
 
 		//>> receive one CAN command
 		CAN_receive_packet();
+
 	}
     /* USER CODE END WHILE */
 

@@ -53,6 +53,7 @@
 
 #define ADCV	 0x0360		// 3kHz  Cell, all Cells
 #define ADAX	 0x04E0		// 14kHz GPIO
+#define ADSTAT	 0x04EA		// 14kHz internal Temp
 
 // Settings
 #define NUM_OF_CLIENTS 8
@@ -64,6 +65,7 @@ extern SPI_HandleTypeDef hspi1;
 // SPI MB Functions
 HAL_StatusTypeDef Read_Voltages(uint16_t *data_buffer);
 HAL_StatusTypeDef Read_Temp(uint16_t *data_buffer);
+uint16_t read_ADBMS_Temp();
 HAL_StatusTypeDef set_DCCx(uint32_t* cells_to_balance);
 HAL_StatusTypeDef ADBMS_HW_Init();
 

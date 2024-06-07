@@ -10,6 +10,7 @@
 static uint8_t error_counter = 2;
 BatterySystemTypeDef battery_values;
 
+/*
 void init_Battery_values(){
 	battery_values.totalVoltage = 0;
 	battery_values.highestCellVoltage = 0;
@@ -26,18 +27,7 @@ void init_Battery_values(){
 	battery_values.status = 0;
 	battery_values.error = 0;
 }
-
-uint8_t get_battery_status_code(uint16_t GPIO_Input){
-	uint8_t status_code = 0;
-	status_code |= (battery_values.error&0x1F)==0 ? STATUS_BATTERY_OK : 0;
-	status_code |= (GPIO_Input&Charger_Con_Pin)==Charger_Con_Pin ? STATUS_CHARGING : 0;
-	// status MB temp
-	status_code |= (GPIO_Input&V_FB_AIR_positive_Pin)==V_FB_AIR_positive_Pin ? STATUS_AIR_POSITIVE : 0;
-	status_code |= (GPIO_Input&V_FB_AIR_negative_Pin)==V_FB_AIR_negative_Pin ? STATUS_AIR_NEGATIVE : 0;
-	status_code |= (GPIO_Input&V_FB_PC_Relay_Pin)==V_FB_PC_Relay_Pin ? STATUS_PRECHARGE : 0;
-	battery_values.status = status_code;
-	return status_code;
-}
+*/
 
 void battery_reset_error_flags(){
 	battery_values.error = 0;
@@ -57,6 +47,15 @@ void set_reset_battery_status_flag(uint8_t set, uint8_t mask){
 	}else{
 		battery_values.status &= ~mask;
 	}
+}
+
+uint8_t get_battery_status_code(uint16_t GPIO_Input){
+	set_reset_battery_status_flag((battery_values.error&0x1F)==0 ? 1 : 0, STATUS_BATTERY_OK);
+	set_reset_battery_status_flag(battery_values.adbms_itemp<=85 ? 1 : 0, STATUS_MB_TEMP_OK);
+	set_reset_battery_status_flag((GPIO_Input&V_FB_AIR_positive_Pin)==V_FB_AIR_positive_Pin ? 1 : 0, STATUS_AIR_POSITIVE);
+	set_reset_battery_status_flag((GPIO_Input&V_FB_AIR_negative_Pin)==V_FB_AIR_negative_Pin ? 1 : 0, STATUS_AIR_NEGATIVE);
+	set_reset_battery_status_flag((GPIO_Input&V_FB_PC_Relay_Pin)==V_FB_PC_Relay_Pin ? 1 : 0, STATUS_PRECHARGE);
+	return battery_values.status;
 }
 
 void set_relays(uint8_t CAN_Data){
@@ -142,6 +141,7 @@ uint8_t volt2celsius(uint16_t volt_100uV){		// convert volt to celsius with poly
 Battery_StatusTypeDef refresh_SDC(){
 	if ((battery_values.error&0x1F) == 0){
 		// SDC OK
+		SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin;	// SDC high
 		// reset tim7 timeout counter
 		TIM7->CNT = 0;
 		error_counter = 0;
@@ -185,9 +185,8 @@ Battery_StatusTypeDef SDC_reset(){
 	status_hw |= check_battery();
 	// SDC on / off
 	if(status_hw == HAL_OK){
-		TIM7->CNT = 0;
+		TIM7->CNT = 0;		// reset tim7 timeout counter
 		SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin;	// SDC high
-		// reset tim7 timeout counter
 		return BATTERY_OK;
 	}else{
 		SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin<<16;	// SDC low
@@ -195,35 +194,42 @@ Battery_StatusTypeDef SDC_reset(){
 	}
 }
 
-uint8_t balancing(uint16_t *volt_data){		// retrun if charger should be active
-	// do some balancing
-	uint32_t balance_cells[NUM_OF_CLIENTS];
-	if(battery_values.highestCellVoltage >= 33000){		// start balancing at 4.15 V
-		for(uint16_t i=0; i<NUM_OF_CLIENTS; i++){
-			balance_cells[i] = 0;
-			for(uint8_t j=0; j<18; j++){
-				// get difference per cell to lowest cell
-				if((volt_data[i*18 + j]-battery_values.lowestCellVoltage) > 100){
-					balance_cells[i] |= 1<<j;
+void stop_balancing(){
+	for(uint8_t i=0; i<NUM_OF_CLIENTS; i++){
+		battery_values.balance_cells[i] = 0;
+	}
+	set_DCCx(battery_values.balance_cells);		// stop balancing
+}
 
+uint8_t balancing(){				// retrun if charger should be active
+	uint16_t itemp = read_ADBMS_Temp();
+	battery_values.adbms_itemp = itemp;
+	if(itemp>85){
+		stop_balancing();
+		return 0;
+	}else{
+		// do some balancing
+		if(battery_values.highestCellVoltage >= 41500){		// start balancing at 4.15 V
+			for(uint16_t i=0; i<NUM_OF_CLIENTS; i++){
+				battery_values.balance_cells[i] = 0;
+				for(uint8_t j=0; j<18; j++){
+					// get difference per cell to lowest cell
+					if((battery_values.volt_buffer[i*18 + j]-battery_values.lowestCellVoltage) > 200){
+						battery_values.balance_cells[i] |= 1<<j;
+					}
 				}
 			}
-			//balance_cells[i] &= 0x0003C000;
-		}
-		set_DCCx(balance_cells);
-		//write_balancing_PWM(1, balance_value);
+			set_DCCx(battery_values.balance_cells);		// actuall balancing command
 
-		if(battery_values.highestCellVoltage >= 41900){		// stop charging at 4.19 V
-			return 0;
+			if(battery_values.highestCellVoltage >= 41900){		// stop charging at 4.19 V
+				return 0;
+			}else{
+				return 1;
+			}
 		}else{
+			stop_balancing();
 			return 1;
 		}
-	}else{
-		for(uint8_t i=0; i<NUM_OF_CLIENTS; i++){
-			balance_cells[i] = 0;
-		}
-		set_DCCx(balance_cells);
-		return 1;
 	}
 }
 
@@ -231,19 +237,23 @@ void charging(uint16_t input_data){
    	if(input_data & Charger_Con_Pin){		// charger connected
 		if((battery_values.status&STATUS_CHARGING) == 0){
 			set_reset_battery_status_flag(1, STATUS_CHARGING);
-			//set_relays(AIR_POSITIVE | AIR_NEGATIVE);	// close AIR relais
 		}else{
-			//if(balancing((uint16_t*)(battery_values.volt_buffer))){
+			if(balancing()){
 				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin;	// high
-			//}else{
-			//	Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
-			//}
+			}else{
+				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
+			}
 		}
 	}else{
-		if((battery_values.status&STATUS_CHARGING) == STATUS_CHARGING){
+		if((battery_values.status&STATUS_CHARGING) == STATUS_CHARGING){		// charger disconnected
 			set_reset_battery_status_flag(0, STATUS_CHARGING);
 			Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
-			//set_relays(0);		// open AIR relais
+			battery_values.adbms_itemp = 0;
+			stop_balancing();
 		}
 	}
+}
+
+void set_time_per_measurement(uint16_t time_ms){
+	battery_values.time_per_measurement = time_ms;
 }

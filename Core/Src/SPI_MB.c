@@ -71,7 +71,6 @@ uint16_t generatePEC(uint8_t data[], size_t length) {
     return pec;
 }
 
-
 HAL_StatusTypeDef Command(uint16_t command){	// checked
 	uint8_t tx_data[4];
 	uint8_t crc_data[2];
@@ -207,38 +206,65 @@ HAL_StatusTypeDef Read_Temp(uint16_t *data_buffer){		// buffer NUM_OF_CLIENTS * 
 	return status;
 }
 
+uint16_t read_ADBMS_Temp(){
+	HAL_StatusTypeDef status;
+	uint8_t sbuffer[NUM_OF_CLIENTS*6];		// short buffer for a single transmission
+	uint16_t maxtemp = 0;
+	uint16_t tempx = 0;
+	wake_up();
+	Command(ADSTAT);
+	HAL_Delay(3);
+	status = Read_Registergroup(RDSTATA, sbuffer);
+	if (status){
+		return 100;
+	}
+	for(uint8_t i=0; i<NUM_OF_CLIENTS; i++){
+		tempx = sbuffer[i*6 +2] | (sbuffer[i*6 +3]<<8);
+		if (tempx > maxtemp) {
+			maxtemp = tempx;
+		}
+	}
+	maxtemp = maxtemp * 0.0001 / 0.0076 - 276;
+	return maxtemp;
+}
+
 HAL_StatusTypeDef set_DCCx(uint32_t* cells_to_balance){		// set discharge per cell to true/false
 	HAL_StatusTypeDef status = HAL_OK;
 	uint8_t enable_discharge = 0;
 
-	// read all temps to enable discharge
-
 	wake_up();
 	// set dccx per client
-	uint8_t sbuffer[6];
-	for(uint8_t i=0; i<NUM_OF_CLIENTS; i++){
+	uint8_t config_data_A[NUM_OF_CLIENTS*6];
+	uint8_t config_data_B[NUM_OF_CLIENTS*6];
+	for(uint16_t i=0; i<NUM_OF_CLIENTS; i++){		// create data
+		for(uint16_t j=0; j<6; j++){
+			config_data_A[i*6+j] = CFGAR[j];
+			config_data_B[i*6+j] = CFGBR[j];
+			if(j==0){
+				config_data_B[i*6+j] |= (cells_to_balance[NUM_OF_CLIENTS-1-i]>>8) & 0xF0;
+			}else if(j==1){
+				config_data_B[i*6+j] |= (cells_to_balance[NUM_OF_CLIENTS-1-i]>>16) & 0x03;
+			}else if(j==4){
+				config_data_A[i*6+j] |= cells_to_balance[NUM_OF_CLIENTS-1-i] & 0xFF;
+			}else if(j==5){
+				config_data_A[i*6+j] |= (cells_to_balance[NUM_OF_CLIENTS-1-i]>>8) & 0x0F;
+			}
+		}
 		if(cells_to_balance[i]){
 			enable_discharge = 1;
 		}
-		for(uint8_t j=0; j<6; j++){
-			sbuffer[j] = CFGAR[j];
-		}
-		sbuffer[4] |= cells_to_balance[i] & 0xFF;
-		sbuffer[5] |= (cells_to_balance[i]>>8) & 0x0F;
-		status |= Write_Registergroup(WRCFGA, sbuffer);
-		for(uint8_t j=0; j<6; j++){
-			sbuffer[j] = CFGBR[j];
-		}
-		sbuffer[0] |= (cells_to_balance[i]>>8) & 0xF0;
-		sbuffer[1] |= (cells_to_balance[i]>>16) & 0x03;
-		status |= Write_Registergroup(WRCFGB, sbuffer);
 	}
+	status |= Write_Registergroup(WRCFGA, config_data_A);		// send Data
+	status |= Write_Registergroup(WRCFGB, config_data_B);
 
-	if(enable_discharge){
+	HAL_Delay(1);
+
+	if(enable_discharge){		// enable/disable balancing
 		status|= Command(UNMUTE);
 	}else{
 		status|= Command(MUTE);
 	}
+
 	return status;
 }
 

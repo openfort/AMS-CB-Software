@@ -48,6 +48,11 @@ typedef struct {
     int32_t actualCurrent;
     int32_t CurrentCounter;
 
+    uint16_t time_per_measurement;
+    uint16_t adbms_itemp;
+
+    uint32_t balance_cells[NUM_OF_CLIENTS];
+
 	uint16_t volt_buffer[18*NUM_OF_CLIENTS];
 	uint16_t temp_buffer[10*NUM_OF_CLIENTS];
 } BatterySystemTypeDef;
@@ -66,4 +71,5 @@ Battery_StatusTypeDef SDC_reset();
 Battery_StatusTypeDef check_battery();
 void set_relays(uint8_t CAN_Data);
 void charging(uint16_t input_data);
+void set_time_per_measurement(uint16_t time_ms);
 #endif /* INC_BATTERY_H_ */
