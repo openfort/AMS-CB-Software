@@ -21,6 +21,8 @@
 #define MIN_TEMP 16725		// min temperature at 20°
 #define MAX_TEMP 6115		// max temperature at 60°
 
+// extern handle
+extern TIM_HandleTypeDef htim16;
 
 typedef enum {
   BATTERY_OK       		= 0x00,
@@ -70,6 +72,6 @@ uint8_t volt2celsius(uint16_t volt_100uV);
 Battery_StatusTypeDef SDC_reset();
 Battery_StatusTypeDef check_battery();
 void set_relays(uint8_t CAN_Data);
-void charging(uint16_t input_data);
+void charging(uint32_t input_data);
 void set_time_per_measurement(uint16_t time_ms);
 #endif /* INC_BATTERY_H_ */

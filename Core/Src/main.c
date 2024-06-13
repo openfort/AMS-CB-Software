@@ -52,6 +52,7 @@ SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
+TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart2;
 
@@ -67,6 +68,7 @@ static void MX_CAN1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
+static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
@@ -111,6 +113,7 @@ int main(void)
   MX_SPI1_Init();
   MX_TIM6_Init();
   MX_TIM7_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
 
   // User Variables
@@ -425,6 +428,38 @@ static void MX_TIM7_Init(void)
 }
 
 /**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 64000;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 65535;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -482,8 +517,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, SDC_Out_Pin|Charge_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, User_LED_Pin|Drive_AIR_positive_Pin|Drive_AIR_negative_Pin|Drive_Precharge_Relay_Pin
-                          |Reserve_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, User_LED_Pin|Drive_AIR_positive_Pin|Drive_AIR_negative_Pin|Drive_Precharge_Relay_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : SDC_IN_Pin V_FB_AIR_negative_Pin V_FB_AIR_positive_Pin V_FB_PC_Relay_Pin
                            Charger_Con_Pin */
@@ -494,9 +528,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : ISO_SPI_CS2_Pin ISO_SPI_CS1_Pin User_LED_Pin Drive_AIR_positive_Pin
-                           Drive_AIR_negative_Pin Drive_Precharge_Relay_Pin Reserve_Pin */
+                           Drive_AIR_negative_Pin Drive_Precharge_Relay_Pin */
   GPIO_InitStruct.Pin = ISO_SPI_CS2_Pin|ISO_SPI_CS1_Pin|User_LED_Pin|Drive_AIR_positive_Pin
-                          |Drive_AIR_negative_Pin|Drive_Precharge_Relay_Pin|Reserve_Pin;
+                          |Drive_AIR_negative_Pin|Drive_Precharge_Relay_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -508,6 +542,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : Precharge_EN_Pin */
+  GPIO_InitStruct.Pin = Precharge_EN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(Precharge_EN_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

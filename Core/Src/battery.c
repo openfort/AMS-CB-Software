@@ -201,53 +201,66 @@ void stop_balancing(){
 	set_DCCx(battery_values.balance_cells);		// stop balancing
 }
 
-uint8_t balancing(){				// retrun if charger should be active
+void balancing(){				// retrun if charger should be active
 	uint16_t itemp = read_ADBMS_Temp();
 	battery_values.adbms_itemp = itemp;
-	if(itemp>85){
+	if(itemp>=83){
 		stop_balancing();
-		return 0;
 	}else{
 		// do some balancing
-		if(battery_values.highestCellVoltage >= 41500){		// start balancing at 4.15 V
+		if(battery_values.highestCellVoltage >= 41000){		// start balancing at 4.10 V
 			for(uint16_t i=0; i<NUM_OF_CLIENTS; i++){
 				battery_values.balance_cells[i] = 0;
 				for(uint8_t j=0; j<18; j++){
 					// get difference per cell to lowest cell
-					if((battery_values.volt_buffer[i*18 + j]-battery_values.lowestCellVoltage) > 200){
+					if((battery_values.volt_buffer[i*18 + j]-battery_values.lowestCellVoltage) > 100){
 						battery_values.balance_cells[i] |= 1<<j;
 					}
 				}
 			}
 			set_DCCx(battery_values.balance_cells);		// actuall balancing command
 
-			if(battery_values.highestCellVoltage >= 41900){		// stop charging at 4.19 V
-				return 0;
-			}else{
-				return 1;
-			}
 		}else{
 			stop_balancing();
-			return 1;
 		}
 	}
 }
 
-void charging(uint16_t input_data){
-   	if(input_data & Charger_Con_Pin){		// charger connected
+void precharge_logic(){
+	static uint32_t GPIOB_old = 0;
+	uint32_t GPIOB_Input = Precharge_EN_GPIO_Port->IDR;
+	if ((GPIOB_Input & Precharge_EN_Pin)>(GPIOB_old & Precharge_EN_Pin)){ 			// rising edge pc_en
+		set_relays(AIR_NEGATIVE | PRECHARGE_RELAY);
+		TIM16->CNT = 0;
+		HAL_TIM_Base_Start(&htim16);		// start precharge timer
+	}else if(GPIOB_Input & Precharge_EN_Pin){		// wait for timer
+		if(TIM16->CNT > 5500){
+			set_relays(AIR_NEGATIVE | AIR_POSITIVE);
+			HAL_TIM_Base_Stop(&htim16);		// stop precharge timer
+			TIM16->CNT = 0;
+		}else if(TIM16->CNT > 5000){
+			set_relays(AIR_NEGATIVE | AIR_POSITIVE | PRECHARGE_RELAY);
+		}
+	}else if((GPIOB_Input & Precharge_EN_Pin)<(GPIOB_old & Precharge_EN_Pin)){		// falling edge pc_en
+		set_relays(0);
+	}
+	GPIOB_old = GPIOB_Input;
+}
+
+void charging(uint32_t input_data){
+	// precharge logic
+	precharge_logic();
+
+	// charging logic
+   	if(!(input_data & Charger_Con_Pin)){		// charger connected
 		if((battery_values.status&STATUS_CHARGING) == 0){
 			set_reset_battery_status_flag(1, STATUS_CHARGING);
 		}else{
-			if(balancing()){
-				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin;	// high
-			}else{
-				Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
-			}
+			balancing();
 		}
 	}else{
 		if((battery_values.status&STATUS_CHARGING) == STATUS_CHARGING){		// charger disconnected
 			set_reset_battery_status_flag(0, STATUS_CHARGING);
-			Charge_EN_GPIO_Port->BSRR = Charge_EN_Pin<<16;	// low
 			battery_values.adbms_itemp = 0;
 			stop_balancing();
 		}

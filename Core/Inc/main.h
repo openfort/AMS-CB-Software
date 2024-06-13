@@ -103,8 +103,8 @@ void Error_Handler(void);
 #define Drive_AIR_negative_GPIO_Port GPIOB
 #define Drive_Precharge_Relay_Pin GPIO_PIN_6
 #define Drive_Precharge_Relay_GPIO_Port GPIOB
-#define Reserve_Pin GPIO_PIN_7
-#define Reserve_GPIO_Port GPIOB
+#define Precharge_EN_Pin GPIO_PIN_7
+#define Precharge_EN_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

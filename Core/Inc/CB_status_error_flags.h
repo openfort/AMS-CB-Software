@@ -21,9 +21,9 @@
 #define STATUS_BATTERY_OK	(1<<0)		// set to 1 when accumulator system is ok, otherwise 0
 #define STATUS_CHARGING		(1<<1)		// set to 1 when system is in charging mode, otherwise 0
 #define STATUS_MB_TEMP_OK	(1<<2)		// set to 1 when MB temperature is ok, set to 0 if one or more MB has overtemperature due to balancing
-#define STATUS_AIR_POSITIVE (1<<3)		// set to 1 when AIR positive is closed
-#define STATUS_AIR_NEGATIVE (1<<4)		// set to 1 when AIR negative is closed
-#define STATUS_PRECHARGE 	(1<<5)		// set to 1 when AIR precharge is closed
+#define STATUS_AIR_POSITIVE (1<<5)		// set to 1 when AIR positive is closed
+#define STATUS_AIR_NEGATIVE (1<<3)		// set to 1 when AIR negative is closed
+#define STATUS_PRECHARGE 	(1<<4)		// set to 1 when AIR precharge is closed
 #define STATUS_RESERVE2		(1<<6)		// unused, set to 0
 #define STATUS_RESERVE1		(1<<7)		// unused, set to 0
 
