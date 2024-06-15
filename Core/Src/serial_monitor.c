@@ -20,6 +20,5 @@ void SerialMonitor(uint8_t* data, uint16_t size){
 	DMA_buffer[size+3] = stop[1];
 
 	//HAL_UART_Transmit(&huart2, DMA_buffer, size+4, 100);
-
 	HAL_UART_Transmit_DMA(&huart2, DMA_buffer, size+4);
 }
