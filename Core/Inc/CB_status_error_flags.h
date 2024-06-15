@@ -34,7 +34,7 @@
 #define ERROR_SDC			(1<<3)		// set to 1 if SDC is in error state
 #define ERROR_SPI			(1<<4)		// set to 1 if an error related to IsoSPI occurs
 #define ERROR_CAN			(1<<5)		// set to 1 if CAN buffer overflow occurs
-#define ERROR_RESERVE2		(1<<6)		// unused, set to 0
+#define ERROR_IVT			(1<<6)		// set to 1 if IVT-S doesn't send data
 #define ERROR_RESERVE1		(1<<7)		// unused, set to 0
 
 #endif /* INC_CB_STATUS_ERROR_FLAGS_H_ */

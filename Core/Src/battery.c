@@ -139,6 +139,9 @@ uint8_t volt2celsius(uint16_t volt_100uV){		// convert volt to celsius with poly
 }
 
 Battery_StatusTypeDef refresh_SDC(){
+	if(TIM16->CNT > 500){
+		set_battery_error_flag(ERROR_IVT);
+	}
 	if ((battery_values.error&0x1F) == 0){
 		// SDC OK
 		SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin;	// SDC high
@@ -183,6 +186,9 @@ Battery_StatusTypeDef SDC_reset(){
 	HAL_StatusTypeDef status_hw;
 	status_hw = ADBMS_HW_Init();
 	status_hw |= check_battery();
+	if(TIM16->CNT > 500){
+		status_hw |= HAL_ERROR;
+	}
 	// SDC on / off
 	if(status_hw == HAL_OK){
 		TIM7->CNT = 0;		// reset tim7 timeout counter

@@ -142,6 +142,7 @@ void CAN_receive_packet(){
 	}else if(addres == IVT_MSG_RESPONSE){
 		return;
 	}else if(addres == IVT_MSG_RESULT_I){
+		TIM16->CNT = 0;
 		if(RxData[0] == IVT_NCURRENT){
 			battery_values.actualCurrent = RxData[5] | RxData[4]<<8 | RxData[3]<<16 | RxData[2]<<24;
 		}

@@ -458,6 +458,8 @@ static void MX_TIM16_Init(void)
   }
   /* USER CODE BEGIN TIM16_Init 2 */
 
+  HAL_TIM_Base_Start(&htim16);		// start timer16 for IVT-S watch
+
   /* USER CODE END TIM16_Init 2 */
 
 }
