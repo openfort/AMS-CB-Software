@@ -228,18 +228,19 @@ void balancing(){				// retrun if charger should be active
 
 void precharge_logic(){
 	static uint32_t GPIOB_old = 0;
+	static uint32_t cnt_100ms = 0;
 	uint32_t GPIOB_Input = Precharge_EN_GPIO_Port->IDR;
 	if ((GPIOB_Input & Precharge_EN_Pin)>(GPIOB_old & Precharge_EN_Pin)){ 			// rising edge pc_en
 		set_relays(AIR_NEGATIVE | PRECHARGE_RELAY);
-		TIM16->CNT = 0;
-		HAL_TIM_Base_Start(&htim16);		// start precharge timer
-	}else if(GPIOB_Input & Precharge_EN_Pin){		// wait for timer
-		if(TIM16->CNT > 5500){
+		cnt_100ms = 0;
+	}else if(GPIOB_Input & Precharge_EN_Pin){										// pc_en high
+		if(cnt_100ms > 55){
 			set_relays(AIR_NEGATIVE | AIR_POSITIVE);
-			HAL_TIM_Base_Stop(&htim16);		// stop precharge timer
-			TIM16->CNT = 0;
-		}else if(TIM16->CNT > 5000){
+		}else if(cnt_100ms > 50){
 			set_relays(AIR_NEGATIVE | AIR_POSITIVE | PRECHARGE_RELAY);
+			cnt_100ms++;		// increment every 100ms
+		}else{
+			cnt_100ms++;		// increment every 100ms
 		}
 	}else if((GPIOB_Input & Precharge_EN_Pin)<(GPIOB_old & Precharge_EN_Pin)){		// falling edge pc_en
 		set_relays(0);
