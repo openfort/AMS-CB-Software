@@ -21,6 +21,8 @@
 #define MIN_TEMP 16725		// min temperature at 20°
 #define MAX_TEMP 6115		// max temperature at 60°
 
+#define AKKU_CAPACITANCE 45000		// in As ≙ 12.5 Ah
+
 #define IVT_TIMEOUT 400
 
 // extern handle

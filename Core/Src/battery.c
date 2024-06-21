@@ -10,25 +10,6 @@
 static uint8_t error_counter = 2;
 BatterySystemTypeDef battery_values;
 
-/*
-void init_Battery_values(){
-	battery_values.totalVoltage = 0;
-	battery_values.highestCellVoltage = 0;
-	battery_values.lowestCellVoltage = 0;
-	battery_values.meanCellVoltage = 0;
-
-	battery_values.highestCellTemp = 0;
-	battery_values.lowestCellTemp = 0;
-	battery_values.meanCellTemp = 0;
-
-	battery_values.actualCurrent = 0;
-	battery_values.CurrentCounter = 0;
-
-	battery_values.status = 0;
-	battery_values.error = 0;
-}
-*/
-
 void battery_reset_error_flags(){
 	battery_values.error = 0;
 }

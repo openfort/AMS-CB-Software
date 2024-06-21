@@ -73,8 +73,11 @@ HAL_StatusTypeDef send_data2ECU(uint16_t GPIO_Input){		// 8 Bytes for TxData, LS
 	uint16_t actualCurrent = battery_values.actualCurrent;
 	can_data[4] = (uint8_t)(actualCurrent/1000);
 	can_data[5] = volt2celsius(battery_values.highestCellTemp);
-	can_data[6] = 100;		// SoC TBD
-
+	if (battery_values.CurrentCounter > AKKU_CAPACITANCE){
+		can_data[6] = 0;		// SoC 0% - 100%
+	}else{
+		can_data[6] = 100 - (uint8_t)(battery_values.CurrentCounter / AKKU_CAPACITANCE);		// SoC 0% - 100%
+	}
 	return send_CAN(ADDR_ECU_TX, can_data);
 }
 
