@@ -159,10 +159,6 @@ int main(void)
 
 		//>> reset error flags after transmisson
 		battery_reset_error_flags();
-		//>> check can overflow
-		if(FIFO_ovf()){
-			set_battery_error_flag(ERROR_CAN);
-		}
 
 		set_time_per_measurement(TIM6->CNT + 100*((TIM6->SR & TIM_SR_UIF) != 0));
 
