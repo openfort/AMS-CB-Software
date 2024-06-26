@@ -147,6 +147,7 @@ int main(void)
 
 		//>> Check-Batterie
 		check_battery();
+		check_SDC_Feedback(GPIOA_Input);
 
 		//>> charging logic
 		charging(GPIOA_Input);

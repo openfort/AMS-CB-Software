@@ -74,6 +74,7 @@ void set_battery_error_flag(uint8_t mask);
 //void set_reset_battery_status_flag(uint8_t set, uint8_t mask);
 uint8_t volt2celsius(uint16_t volt_100uV);
 Battery_StatusTypeDef SDC_reset();
+void check_SDC_Feedback(uint32_t input_data);
 Battery_StatusTypeDef check_battery();
 void set_relays(uint8_t CAN_Data);
 void charging(uint32_t input_data);
