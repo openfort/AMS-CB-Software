@@ -136,11 +136,21 @@ Battery_StatusTypeDef refresh_SDC(){
 		if(error_counter >= 3){
 			SDC_Out_GPIO_Port->BSRR = SDC_Out_Pin<<16;	// SDC low
 			set_battery_error_flag(ERROR_SDC);
-			set_relays(0);								// open AIR relais
+			//set_relays(0);								// open AIR relais
 			return BATTERY_ERROR;
 		}
 	}
 	return BATTERY_OK;
+}
+
+void check_SDC_Feedback(uint32_t input_data){
+	static uint32_t old_data = 0;
+	if ((input_data & SDC_IN_Pin) < (old_data & SDC_IN_Pin)){					// open relais when global SDC falling
+		Drive_AIR_positive_GPIO_Port->BSRR = Drive_AIR_positive_Pin<<16;		// low
+		Drive_AIR_negative_GPIO_Port->BSRR = Drive_AIR_negative_Pin<<16;		// low
+		Drive_Precharge_Relay_GPIO_Port->BSRR = Drive_Precharge_Relay_Pin<<16;	// low
+	}
+	old_data = input_data;
 }
 
 Battery_StatusTypeDef check_battery(){

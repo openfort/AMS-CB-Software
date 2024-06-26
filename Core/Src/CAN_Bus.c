@@ -10,9 +10,9 @@
 HAL_StatusTypeDef send_CAN(uint32_t addres, uint8_t *TxBuffer){		// send 8 Bytes
 	static uint32_t TxMailbox[20];
 	static CAN_TxHeaderTypeDef TxHeader;
-	TxHeader.ExtId = addres;   			// ID of the message
+	TxHeader.StdId = addres;   			// ID of the message
 	TxHeader.DLC = 8;         			// Data Length Code (number of bytes in data field)
-	TxHeader.IDE = CAN_ID_EXT; 			// Extended ID type
+	TxHeader.IDE = CAN_ID_STD; 			// Extended ID type
 	TxHeader.RTR = CAN_RTR_DATA; 		// Data frame, not remote frame
 	TxHeader.TransmitGlobalTime = DISABLE; // Disable time stamp
     // Transmit CAN message
@@ -41,7 +41,7 @@ uint32_t read_CAN(uint8_t *RxData){
 	if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) > 0) {
 	  if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK) {
 		// Process the received message
-	    return RxHeader.ExtId;
+	    return RxHeader.StdId;
 	  }
 	}
 	// Check if a message is received in CAN RX FIFO 1
@@ -137,7 +137,7 @@ void CAN_receive_packet(){
 	uint8_t RxData[8];
 	uint32_t addres = 0;
 	addres = read_CAN(RxData);
-	if(addres == ADDR_ECU_TX){
+	if(addres == ADDR_ECU_RX){
 		set_relays(RxData[0]);
 		if(RxData[0] & BATTERY_SW_RESET){
 			SDC_reset();

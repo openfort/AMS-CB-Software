@@ -272,12 +272,12 @@ static void MX_CAN1_Init(void)
   CAN_FilterTypeDef sFilterConfig;
   // Configure Filter for ECU on FIFO 0
   sFilterConfig.FilterBank = 0; // Use first filter bank
-  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-  sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-  sFilterConfig.FilterIdHigh = ((ADDR_ECU_RX >> 13)& 0xFFFF);
-  sFilterConfig.FilterIdLow =  ((ADDR_ECU_RX << 3) & 0xFFF8);
-  sFilterConfig.FilterMaskIdHigh = 0xFFFF;
-  sFilterConfig.FilterMaskIdLow = 0xFFF8;
+  sFilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
+  sFilterConfig.FilterScale = CAN_FILTERSCALE_16BIT;
+  sFilterConfig.FilterIdHigh = ADDR_ECU_RX << 5;
+  sFilterConfig.FilterIdLow =  0x0000;
+  sFilterConfig.FilterMaskIdHigh = 0x0000;
+  sFilterConfig.FilterMaskIdLow = 0x0000;
   sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
   sFilterConfig.FilterActivation = ENABLE;
   sFilterConfig.SlaveStartFilterBank = 14; // Only necessary for dual CAN setups
